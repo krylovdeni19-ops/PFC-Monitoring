@@ -4,26 +4,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Остатки ПФЦ</title>
 <link rel="stylesheet" href="style.css">
-<script src="https://accounts.google.com/gsi/client" defer></script>
 <script src="app.js" defer></script>
 <main>
-  <h1>Остатки ПФЦ</h1>
-  <section>
-    <h2>Подключение Google Таблицы</h2>
-    <form id="settings">
-      <label>Идентификатор клиента Google OAuth <input id="client" required></label>
-      <label>Ссылка на Google Таблицу <input id="sheet" type="url" required></label>
-      <button>Подключить Google</button>
-    </form>
-  </section>
-  <section>
-    <h2>Результат из «Мой ПФЦ»</h2>
-    <p id="summary">Откройте результат поиска через расширение Chrome.</p>
-    <div id="preview"></div>
-    <button id="save" disabled>Записать в таблицу</button>
-    <button id="history" disabled>Показать последние записи</button>
-    <p id="status" role="status"></p>
-    <div id="records"></div>
+  <h1>Текущие остатки ПФЦ</h1>
+  <form id="connect">
+    <label for="reader">Ссылка на приложение чтения</label>
+    <input id="reader" type="url" required>
+    <button>Подключить Google</button>
+  </form>
+  <p id="status" role="status">Подключитесь рабочим Google-аккаунтом.</p>
+  <section id="stock" hidden>
+    <label for="search">Баркод, название или МХ</label>
+    <input id="search" type="search">
+    <p id="count" role="status"></p>
+    <div class="table"><table><thead><tr><th>МХ</th><th>Результат</th><th>Баркод</th><th>Название</th><th>Количество</th><th>Артикул WB</th><th>Бренд</th><th>Проверено МСК</th></tr></thead><tbody></tbody></table></div>
   </section>
 </main>
 </html>
