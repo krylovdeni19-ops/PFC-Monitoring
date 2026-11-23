@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<title>Проверка МХ</title>
+<style>
+  body { width: 390px; padding: 16px; font: 14px/1.5 system-ui; color: #242331; margin: 0; }
+  button { font: inherit; padding: 8px 14px; background: #6332af; color: white; border: 0; border-radius: 8px; cursor: pointer; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+</style>
+<h2>Проверка МХ</h2>
+<button id="read">Прочитать результат WB</button>
+<p><label>Адрес сайта <input id="site" type="url" placeholder="https://имя.github.io/репозиторий/"></label></p>
+<button id="send" disabled>Открыть результат на сайте</button>
+<pre id="output" role="status"></pre>
+<script src="popup.js"></script>
+</html>
