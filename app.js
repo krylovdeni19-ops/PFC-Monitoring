@@ -11,7 +11,7 @@ $('connect').onsubmit = event => {
     return;
   }
   localStorage.setItem('pfc-reader-url', address.value);
-  status.textContent = 'В открывшейся вкладке подтвердите доступ и нажмите «Передать остатки на сайт ПФЦ».';
+  status.textContent = 'Читаем остатки. Если Google запросит вход, подтвердите его в открывшейся вкладке.';
   window.dispatchEvent(new CustomEvent('pfc:connect', {detail: address.value}));
 };
 function renderStock() {
