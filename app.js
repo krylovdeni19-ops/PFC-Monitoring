@@ -7,7 +7,7 @@ address.value = localStorage.getItem('pfc-reader-url') || '';
 $('connect').onsubmit = event => {
   event.preventDefault();
   if (document.documentElement.dataset.pfcExtension !== 'ready') {
-    status.textContent = 'Установите расширение ПФЦ 0.6.0 и обновите страницу.';
+    status.textContent = 'Установите расширение ПФЦ 0.6.1 и обновите страницу.';
     return;
   }
   localStorage.setItem('pfc-reader-url', address.value);
@@ -29,10 +29,27 @@ function renderStock() {
 }
 search.addEventListener('input', renderStock);
 window.addEventListener('pfc:status', event => { status.textContent = event.detail; });
-window.addEventListener('pfc:result', event => {
-  if (!Array.isArray(event.detail) || !event.detail.every(row => Array.isArray(row) && row.length === 8)) return;
-  rows = event.detail;
+function acceptStock(data) {
+  if (!Array.isArray(data) || !data.every(row => Array.isArray(row) && row.length === 8 &&
+      row.every(field => typeof field === 'string' || typeof field === 'number'))) {
+    return false;
+  }
+  rows = data;
   $('stock').hidden = false;
   status.textContent = 'МХ в отчёте: ' + new Set(rows.map(row => row[0])).size;
   renderStock();
-});
+  return true;
+}
+window.addEventListener('pfc:result', event => { acceptStock(event.detail); });
+$('import-stock').onsubmit = event => {
+  event.preventDefault();
+  const field = $('stock-data');
+  try {
+    const packet = JSON.parse(field.value);
+    if (packet?.type !== 'pfc-stock-v1' || !acceptStock(packet.rows)) throw new Error();
+    field.value = '';
+    event.currentTarget.closest('details').open = false;
+  } catch {
+    status.textContent = 'Формат не распознан. Скопируйте данные целиком со страницы Apps Script.';
+  }
+};

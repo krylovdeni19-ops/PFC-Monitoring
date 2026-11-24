@@ -13,6 +13,14 @@
     <button>Подключить Google</button>
   </form>
   <p id="status" role="status">Подключитесь рабочим Google-аккаунтом.</p>
+  <details>
+    <summary>Вставить остатки</summary>
+    <form id="import-stock">
+      <label for="stock-data">Данные из закрытой страницы Apps Script</label>
+      <textarea id="stock-data" rows="5" required autocomplete="off" spellcheck="false"></textarea>
+      <button>Показать остатки</button>
+    </form>
+  </details>
   <section id="stock" hidden>
     <label for="search">Баркод, название или МХ</label>
     <input id="search" type="search">

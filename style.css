@@ -10,3 +10,7 @@ table { border-collapse: collapse; width: 100%; }
 th, td { padding: 8px 12px; border-bottom: 1px solid #e6e0ef; text-align: left; white-space: nowrap; }
 td:nth-child(4) { white-space: normal; min-width: 210px; }
 th { background: #39235b; color: white; }
+
+details { margin: 16px 0; }
+summary { cursor: pointer; }
+textarea { display: block; width: min(100%, 640px); margin: 8px 0; font: inherit; }
