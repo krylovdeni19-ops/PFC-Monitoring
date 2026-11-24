@@ -3,7 +3,9 @@ const address = $('reader');
 const status = $('status');
 const search = $('search');
 let rows = [];
+const stockFilter = $('stock-filter');
 address.value = localStorage.getItem('pfc-reader-url') || '';
+$('read-settings').open = !address.value;
 $('connect').onsubmit = event => {
   event.preventDefault();
   if (document.documentElement.dataset.pfcExtension !== 'ready') {
@@ -16,18 +18,30 @@ $('connect').onsubmit = event => {
 };
 function renderStock() {
   const term = search.value.trim().toLocaleLowerCase('ru');
-  const found = rows.filter(row => [0, 2, 3].some(index => String(row[index]).toLocaleLowerCase('ru').includes(term)));
+  const found = rows.filter(row => (!stockFilter.value || row[1] === stockFilter.value) &&
+    [0, 2, 3].some(index => String(row[index]).toLocaleLowerCase('ru').includes(term)));
   const count = found.reduce((total, row) => total + (Number(row[4]) || 0), 0);
   $('count').textContent = 'Строк: ' + found.length + ' · Всего: ' + count + ' шт.';
   const body = document.createDocumentFragment();
   for (const row of found) {
     const tr = document.createElement('tr');
-    for (const field of row) tr.insertCell().textContent = field;
+    row.forEach((field, index) => {
+      const cell = tr.insertCell();
+      if (index !== 1) {
+        cell.textContent = field;
+        return;
+      }
+      const pill = document.createElement('span');
+      pill.className = field === 'С товаром' ? 'pill occupied' : 'pill';
+      pill.textContent = field;
+      cell.append(pill);
+    });
     body.append(tr);
   }
   document.querySelector('tbody').replaceChildren(body);
 }
 search.addEventListener('input', renderStock);
+stockFilter.addEventListener('change', renderStock);
 window.addEventListener('pfc:status', event => { status.textContent = event.detail; });
 function acceptStock(data) {
   if (!Array.isArray(data) || !data.every(row => Array.isArray(row) && row.length === 8 &&
@@ -36,6 +50,7 @@ function acceptStock(data) {
   }
   rows = data;
   $('stock').hidden = false;
+  $('summary').hidden = false;
   status.textContent = 'МХ в отчёте: ' + new Set(rows.map(row => row[0])).size;
   renderSummary();
   renderStock();
@@ -99,11 +114,19 @@ function sendWarehouse(action, detail) {
   window.dispatchEvent(new CustomEvent(action, {detail}));
 }
 
+function showScanError(message) {
+  const error = $('scan-error');
+  error.textContent = message;
+  error.hidden = !message;
+}
 function startWarehouse(retry) {
+  showScanError('');
   if (document.documentElement.dataset.pfcWarehouse !== 'ready') {
-    $('progress').textContent = 'Установите расширение ПФЦ 0.7.0 и обновите страницу.';
+    $('progress').textContent = 'Установите расширение ПФЦ 0.7.1 и обновите страницу.';
     return;
   }
+  if (!address.validity.valid) $('read-settings').open = true;
+  if (!writer.value.trim() || !writer.validity.valid) $('scan-settings').open = true;
   if (!address.reportValidity() || !writer.value.trim() || !writer.reportValidity()) {
     $('scan-settings').open = true;
     $('progress').textContent = 'Укажите ссылки чтения и записи Apps Script.';
@@ -112,6 +135,7 @@ function startWarehouse(retry) {
   localStorage.setItem('pfc-writer-url', writer.value.trim());
   localStorage.setItem('pfc-reader-url', address.value.trim());
   localStorage.setItem('pfc-scan-addresses', scanAddresses.value);
+  $('progress').textContent = 'Запускаем обход…';
   sendWarehouse('pfc:scan', {reader: address.value, writer: writer.value, addresses: scanAddresses.value, retry});
 }
 $('scan').onclick = () => startWarehouse(false);
@@ -121,11 +145,15 @@ $('retry-save').onclick = () => sendWarehouse('pfc:scan-save');
 function pollWarehouse() {
   if (document.documentElement.dataset.pfcWarehouse === 'ready') sendWarehouse('pfc:scan-state');
 }
-window.addEventListener('pfc:scan-error', event => { $('progress').textContent = event.detail; });
+window.addEventListener('pfc:scan-error', event => showScanError(event.detail));
 window.addEventListener('pfc:scan-progress', ({detail: job}) => {
   if (!job) return;
   const active = ['scan', 'save'].includes(job.phase);
   $('scan').disabled = active;
+  const indicator = $('run-progress');
+  indicator.hidden = !active;
+  indicator.max = job.total || 1;
+  indicator.value = job.checked;
   $('retry-scan').hidden = job.phase !== 'done' || !job.failed.length;
   $('retry-save').hidden = !['error', 'interrupted'].includes(job.phase) || !job.savedCells;
   const tally = 'Проверено: ' + job.checked + ' из ' + job.total +
