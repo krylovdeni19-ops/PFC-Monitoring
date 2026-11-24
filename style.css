@@ -14,3 +14,8 @@ th { background: #39235b; color: white; }
 details { margin: 16px 0; }
 summary { cursor: pointer; }
 textarea { display: block; width: min(100%, 640px); margin: 8px 0; font: inherit; }
+
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 16px 0; }
+.summary > div { background: white; border: 1px solid #ded6e9; border-radius: 10px; padding: 12px; }
+.summary strong { display: block; font-size: 1.65rem; }
+button:disabled { opacity: .55; cursor: default; }
