@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=095">
-  <script src="app.js?v=095" defer></script>
+  <link rel="stylesheet" href="style.css?v=096">
+  <script src="app.js?v=096" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -50,13 +50,16 @@
           <label>Поиск по товару или МХ
             <input id="search" type="search" placeholder="Артикул WB, баркод, название или МХ">
           </label>
+          <label>Магазин WB
+            <select id="store-filter"><option value="">Все магазины</option></select>
+          </label>
           <label>Состояние МХ
             <select id="stock-filter"><option value="">Все МХ</option><option value="С товаром">С товаром</option><option value="Ничего не найдено">Пустые</option></select>
           </label>
         </div>
       </div>
       <div class="table" tabindex="0" role="region" aria-label="Таблица остатков">
-        <table><thead><tr><th>МХ</th><th>Результат</th><th>Баркод</th><th>Название</th><th>Количество</th><th>Артикул WB</th><th>Бренд</th><th>Проверено МСК</th></tr></thead><tbody></tbody></table>
+        <table><thead><tr><th>МХ</th><th>Результат</th><th>Баркод</th><th>Название</th><th>Количество</th><th>Артикул WB</th><th>Магазин WB</th><th>Проверено МСК</th></tr></thead><tbody></tbody></table>
       </div>
     </section>
 
@@ -112,9 +115,22 @@
       <p id="map-status" role="status">Загрузите остатки, чтобы увидеть занятость.</p>
       <ul class="map-legend"><li><span class="occupied"></span>С товаром</li><li><span class="empty"></span>Пусто</li><li><span class="unknown"></span>Не проверено</li></ul>
       <div id="map-grid" class="map-grid"></div>
-      <dialog id="map-details" aria-labelledby="map-cell-title">
-        <form method="dialog"><button class="secondary" aria-label="Закрыть карточку МХ">Закрыть</button></form>
-        <h2 id="map-cell-title"></h2><p id="map-cell-status"></p><ul id="map-products"></ul>
+      <dialog id="map-details" aria-labelledby="map-cell-title" aria-describedby="map-cell-status">
+        <header class="map-detail-header">
+          <div>
+            <h2 id="map-cell-title"></h2>
+            <p id="map-cell-status"></p>
+            <p id="map-cell-totals" hidden></p>
+          </div>
+          <form method="dialog"><button class="secondary">Закрыть</button></form>
+        </header>
+        <p id="map-cell-empty" hidden></p>
+        <div id="map-products-table" class="table" tabindex="0" role="region" aria-label="Товары в ячейке" hidden>
+          <table>
+            <thead><tr><th scope="col">Название</th><th scope="col">Баркод</th><th scope="col">Артикул WB</th><th scope="col">Магазин WB</th><th scope="col">Количество</th></tr></thead>
+            <tbody id="map-products"></tbody>
+          </table>
+        </div>
       </dialog>
     </section>
 

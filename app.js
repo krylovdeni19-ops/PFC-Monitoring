@@ -4,6 +4,7 @@ const status = $('status');
 const search = $('search');
 let rows = [];
 const stockFilter = $('stock-filter');
+const storeFilter = $('store-filter');
 address.value = localStorage.getItem('pfc-reader-url') || '';
 $('read-settings').open = !address.value;
 $('connect').onsubmit = event => {
@@ -16,11 +17,37 @@ $('connect').onsubmit = event => {
   status.textContent = 'Читаем остатки. Если Google запросит вход, подтвердите его в открывшейся вкладке.';
   window.dispatchEvent(new CustomEvent('pfc:connect', {detail: address.value}));
 };
+function storeName(row) {
+  return row[1] === 'С товаром' ? String(row[6]).trim() : '';
+}
+
+function updateStoreFilter() {
+  const previous = storeFilter.value;
+  const stores = [...new Set(rows.map(storeName).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'ru', {numeric: true}));
+  storeFilter.replaceChildren(new Option('Все магазины', ''),
+    ...stores.map(name => new Option(name, name)));
+  storeFilter.value = stores.includes(previous) ? previous : '';
+}
+
+function stockArticleLink(field) {
+  const article = String(field).trim();
+  if (!/^[1-9]\d*$/.test(article)) return null;
+  const link = document.createElement('a');
+  link.className = 'stock-article-link';
+  link.href = 'https://www.wildberries.ru/catalog/' + article + '/detail.aspx';
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = article;
+  return link;
+}
+
 function renderStock() {
   const term = search.value.trim().toLocaleLowerCase('ru');
   const found = rows.filter(row => (!stockFilter.value || row[1] === stockFilter.value) &&
+    (!storeFilter.value || storeName(row) === storeFilter.value) &&
     ([0, 2, 3].some(index => String(row[index]).toLocaleLowerCase('ru').includes(term)) ||
-      String(row[5]).trim() === term));;
+      String(row[5]).trim() === term));
   const count = found.reduce((total, row) => total + (Number(row[4]) || 0), 0);
   const locations = new Set(found.map(row => row[0])).size;
   $('count').textContent = 'МХ: ' + locations + ' · Строк: ' + found.length + ' · Всего: ' + count + ' шт.';
@@ -39,14 +66,9 @@ function renderStock() {
         cell.append(button);
         return;
       }
-      const article = String(field).trim();
-      if (index === 5 && /^[1-9]\d*$/.test(article)) {
-        const link = document.createElement('a');
-        link.className = 'stock-article-link';
-        link.href = 'https://www.wildberries.ru/catalog/' + article + '/detail.aspx';
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-        link.textContent = article;
+      const link = index === 5 ? stockArticleLink(field) : null;
+      if (link) {
+        const article = link.textContent;
         const lookup = document.createElement('button');
         lookup.type = 'button';
         lookup.className = 'stock-seller-link';
@@ -71,6 +93,7 @@ function renderStock() {
 }
 search.addEventListener('input', renderStock);
 stockFilter.addEventListener('change', renderStock);
+storeFilter.addEventListener('change', renderStock);
 window.addEventListener('pfc:status', event => { status.textContent = event.detail; });
 function acceptStock(data) {
   if (!Array.isArray(data) || !data.every(row => Array.isArray(row) && row.length === 8 &&
@@ -78,6 +101,7 @@ function acceptStock(data) {
     return false;
   }
   rows = data;
+  updateStoreFilter();
   $('stock').hidden = false;
   $('summary').hidden = false;
   status.textContent = 'МХ в отчёте: ' + new Set(rows.map(row => row[0])).size;
@@ -494,11 +518,33 @@ function openMapCell(address) {
   const state = entry?.state || 'Не проверено';
   $('map-cell-status').textContent = entry?.time ? state + ' · Проверено МСК: ' + entry.time : state;
   const items = entry?.products || [];
-  $('map-products').replaceChildren(...items.map(row => {
-    const item = document.createElement('li');
-    item.textContent = row[3] + ' · ' + row[2] + ' · ' + row[4] + ' шт.';
-    return item;
-  }));
+  const total = items.reduce((sum, row) => sum + (Number(row[4]) || 0), 0);
+  const barcodes = new Set(items.map(row => row[2]).filter(Boolean));
+  const format = new Intl.NumberFormat('ru-RU');
+  const totals = $('map-cell-totals');
+  totals.hidden = items.length === 0;
+  totals.textContent = 'Позиций: ' + format.format(items.length) +
+    ' · Баркодов: ' + format.format(barcodes.size) +
+    ' · Всего: ' + format.format(total) + ' шт.';
+  const wrap = $('map-products-table');
+  wrap.hidden = items.length === 0;
+  $('map-cell-empty').hidden = items.length > 0;
+  $('map-cell-empty').textContent = entry ? 'В ячейке нет товара.' : 'Данные проверки этой ячейки ещё не загружены.';
+  const body = document.createDocumentFragment();
+  for (const row of items) {
+    const tr = document.createElement('tr');
+    for (const field of [row[3], row[2]]) tr.insertCell().textContent = field || '—';
+    const article = tr.insertCell();
+    const link = stockArticleLink(row[5]);
+    if (link) article.append(link);
+    else article.textContent = row[5] || '—';
+    tr.insertCell().textContent = storeName(row) || '—';
+    tr.insertCell().textContent = format.format(Number(row[4]) || 0);
+    body.append(tr);
+  }
+  $('map-products').replaceChildren(body);
+  wrap.scrollTop = 0;
+  wrap.scrollLeft = 0;
   $('map-details').showModal();
 }
 

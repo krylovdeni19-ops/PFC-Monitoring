@@ -48,6 +48,7 @@ label { display: block; color: var(--muted); font-size: .88rem; font-weight: 650
 input, textarea, select { display: block; padding: 8px 11px; min-height: 42px; color: var(--ink); background: var(--paper); border: 1px solid #aebccd; }
 input:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible, summary:focus-visible, button:focus-visible { outline: 3px solid #3889cc; outline-offset: 2px; }
 .filters input { width: min(290px, 100%); }
+#store-filter { width: min(230px, 100%); }
 .table { overflow: auto; max-height: 65vh; border-top: 1px solid var(--line); border-radius: 0 0 14px 14px; }
 table { border-spacing: 0; width: 100%; min-width: 970px; }
 th, td { padding: 10px 13px; text-align: left; white-space: nowrap; border-bottom: 1px solid var(--line); }
@@ -71,7 +72,7 @@ summary { cursor: pointer; font-weight: 650; }
   main { padding-top: 14px; gap: 14px; }
   .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .inventory-header, .settings { padding: 14px; }
-  .filters, .filters label, .filters input, .filters select { width: 100%; }
+  .filters, .filters label, .filters input, .filters select, #store-filter { width: 100%; }
 }
 
 .topbar nav { display: flex; gap: 16px; flex-wrap: wrap; }
@@ -117,8 +118,25 @@ summary { cursor: pointer; font-weight: 650; }
 .map-cells .occupied, .map-legend .occupied { background: #cbead5; color: #18472a; }
 .map-cells .empty, .map-legend .empty { background: #fff; color: #293a51; border: 1px solid #aebccd; }
 .map-cells .unknown, .map-legend .unknown { background: #dce4ee; color: #38475b; }
-#map-details { border: 1px solid var(--line); border-radius: 12px; width: min(560px, 90vw); color: var(--ink); }
-#map-details form { float: right; }
+#map-details {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  width: min(960px, calc(100vw - 24px));
+  max-height: 90vh;
+  padding: 0;
+  color: var(--ink);
+}
+.map-detail-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 16px; }
+#map-cell-status, #map-cell-totals, #map-cell-empty { color: var(--muted); font-size: .9rem; }
+#map-cell-empty { padding: 0 16px 16px; }
+#map-products-table { max-height: 55vh; }
+#map-products-table table { min-width: 650px; }
+#map-products-table td:first-child, #map-products-table td:nth-child(4) {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+#map-products-table td:first-child { width: 40%; }
 #map-details::backdrop { background: #12243b8c; }
 
 #changes-tools { border-top: 1px solid var(--line); }
