@@ -1190,7 +1190,7 @@ let transactionsTimeout;
 transactionsButton.addEventListener('click', () => {
   $('transactions-prepared').textContent = '—';
   if (document.documentElement.dataset.pfcTransactions !== 'ready') {
-    transactionsStatus.textContent = 'Обновите расширение ПФЦ до 0.10.8 и перезагрузите страницу.';
+    transactionsStatus.textContent = 'Обновите расширение ПФЦ до 0.11.0 и перезагрузите страницу.';
     return;
   }
   transactionsButton.disabled = true;
