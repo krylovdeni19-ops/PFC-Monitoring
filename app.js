@@ -678,32 +678,62 @@ function trendPair() {
   return before > after && after >= 0 ? [scanHistory[before], scanHistory[after]] : null;
 }
 
+function drawTrend(chart, scans, values, format) {
+  const times = scans.map(scan => {
+    const match = scan.stamp.match(/^(\d{2})\.(\d{2})\.(\d{4}) (\d{2}):(\d{2}):(\d{2})/);
+    if (!match) return NaN;
+    const [, day, month, year, hour, minute, second] = match.map(Number);
+    return Date.UTC(year, month - 1, day, hour, minute, second);
+  });
+  const timeSpan = times.at(-1) - times[0];
+  const timed = times.every(Number.isFinite) && timeSpan > 0;
+  const padding = Math.max(1, Math.ceil((Math.max(...values) - Math.min(...values)) / 5));
+  const low = Math.max(0, Math.min(...values) - padding);
+  const high = Math.max(...values) + padding;
+  const points = values.map((value, index) => ({
+    x: 10 + 86 * (values.length === 1 ? 0.5 : timed ? (times[index] - times[0]) / timeSpan : index / (values.length - 1)),
+    y: 12 + 72 * (high - value) / (high - low)
+  }));
+  const plot = chart.querySelector('.trend-plot');
+  plot.replaceChildren();
+  for (const [index, point] of points.entries()) {
+    const previous = points[index - 1];
+    if (previous) {
+      const line = document.createElement('span');
+      line.className = 'trend-segment';
+      line.style.clipPath = 'polygon(' + previous.x + '% ' + (previous.y - 0.5) + '%, ' +
+        point.x + '% ' + (point.y - 0.5) + '%, ' +
+        point.x + '% ' + (point.y + 0.5) + '%, ' +
+        previous.x + '% ' + (previous.y + 0.5) + '%)';
+      plot.append(line);
+    }
+    const label = scans[index].stamp + ' МСК · ' + format.format(values[index]);
+    const dot = dashboardButton('', () => { $('trend-point-value').textContent = label; });
+    dot.className = 'trend-point';
+    dot.style.left = point.x + '%';
+    dot.style.top = point.y + '%';
+    dot.title = label;
+    dot.setAttribute('aria-label', label);
+    dot.addEventListener('focus', () => { $('trend-point-value').textContent = label; });
+    plot.append(dot);
+  }
+  chart.querySelector('.trend-scale').textContent = 'Шкала: ' + format.format(low) + '–' + format.format(high);
+  chart.querySelector('.trend-start').textContent = scans[0].stamp;
+  chart.querySelector('.trend-end').textContent = scans.length > 1 ? scans.at(-1).stamp : '';
+  $('trend-point-value').textContent = scans.at(-1).stamp + ' МСК · ' + format.format(values.at(-1));
+}
+
 function renderTrend() {
   const metric = $('trend-metric').value;
   const format = new Intl.NumberFormat('ru-RU');
   const scans = fullTrendScans(scanHistory, locationCatalog);
   const values = scans.map(scan => stockSnapshotTotals(scan.cells)[metric]);
-  const max = Math.max(1, ...values);
-  const bars = $('trend-bars');
-  bars.replaceChildren();
   $('trend-status').textContent = scans.length
     ? 'Полные обходы по текущему справочнику МХ · время МСК'
     : 'Нет сохранённых полных обходов по текущему справочнику МХ.';
-  for (const [index, scan] of scans.entries()) {
-    const line = document.createElement('div');
-    line.className = 'dashboard-line';
-    const label = document.createElement('div');
-    label.textContent = scan.stamp + ' · ' + format.format(values[index]);
-    const bar = document.createElement('div');
-    bar.className = 'dashboard-track';
-    bar.setAttribute('aria-hidden', 'true');
-    const fill = document.createElement('span');
-    fill.className = 'dashboard-store-fill';
-    fill.style.width = (100 * values[index] / max) + '%';
-    bar.append(fill);
-    line.append(label, bar);
-    bars.append(line);
-  }
+  const chart = $('trend-chart');
+  chart.hidden = !scans.length;
+  if (scans.length) drawTrend(chart, scans, values, format);
   const pair = trendPair();
   $('trend-open').disabled = !pair;
   const result = $('trend-result');

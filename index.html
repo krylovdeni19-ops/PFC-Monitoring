@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=104">
-  <script src="app.js?v=104" defer></script>
+  <link rel="stylesheet" href="style.css?v=105">
+  <script src="app.js?v=105" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -132,7 +132,12 @@
           <label>Показатель <select id="trend-metric"><option value="units">Штуки</option><option value="occupied">Занятые МХ</option></select></label>
         </div>
         <p id="trend-status">Загрузите историю обходов.</p>
-        <div id="trend-bars"></div>
+        <div id="trend-chart" hidden>
+          <p class="trend-scale"></p>
+          <div class="trend-plot" role="group" aria-label="Точки графика по обходам"></div>
+          <div class="trend-axis"><span class="trend-start"></span><span class="trend-end"></span></div>
+          <p id="trend-point-value" role="status"></p>
+        </div>
         <div id="trend-comparison" hidden>
           <div class="filters">
             <label>Ранний обход (МСК) <select id="trend-from"></select></label>

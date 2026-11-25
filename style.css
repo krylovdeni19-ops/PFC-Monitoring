@@ -242,3 +242,39 @@ summary { cursor: pointer; font-weight: 650; }
   .overview .actions { width: 100%; }
   .overview .actions button { max-width: 100%; white-space: normal; }
 }
+
+#trend-chart { margin-top: 14px; }
+.trend-scale, .trend-axis { color: var(--muted); font-size: .85rem; }
+.trend-plot {
+  position: relative;
+  min-height: 190px;
+  height: clamp(190px, 28vw, 280px);
+  border-block: 1px solid var(--line);
+  background: repeating-linear-gradient(to bottom, transparent 0 calc(25% - 1px), var(--line) calc(25% - 1px) 25%);
+}
+.trend-segment { position: absolute; inset: 0; background: #34658c; pointer-events: none; }
+.trend-point {
+  position: absolute;
+  z-index: 1;
+  min-height: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  transform: translate(-50%, -50%);
+}
+.trend-point::after {
+  content: "";
+  display: block;
+  width: 11px;
+  height: 11px;
+  margin: auto;
+  border: 2px solid #34658c;
+  border-radius: 50%;
+  background: var(--paper);
+}
+.trend-axis { display: flex; justify-content: space-between; gap: 12px; padding-top: 6px; }
+.trend-end { text-align: right; }
+#trend-point-value { margin-top: 8px; font-weight: 650; }
