@@ -1187,7 +1187,8 @@ $('seller-all').addEventListener('click', async event => {
 const transactionsButton = $('transactions-refresh');
 const transactionsStatus = $('transactions-status');
 let transactionsTimeout;
-transactionsButton.addEventListener('click', () => {
+function refreshTransactions() {
+  if (transactionsButton.disabled) return;
   $('transactions-prepared').textContent = '—';
   if (document.documentElement.dataset.pfcTransactions !== 'ready') {
     transactionsStatus.textContent = 'Обновите расширение ПФЦ до 0.11.0 и перезагрузите страницу.';
@@ -1200,7 +1201,10 @@ transactionsButton.addEventListener('click', () => {
     transactionsButton.disabled = false;
   }, 24000);
   sendWarehouse('pfc:transactions');
-});
+}
+
+transactionsButton.addEventListener('click', refreshTransactions);
+window.addEventListener('load', refreshTransactions, {once: true});
 
 window.addEventListener('pfc:transactions-result', ({detail}) => {
   if (!transactionsButton.disabled) return;
