@@ -205,3 +205,21 @@ summary { cursor: pointer; font-weight: 650; }
 
 .settings .scan-parallel { display: flex; align-items: center; gap: 8px; }
 .settings .scan-parallel input { width: auto; min-height: auto; }
+
+#dashboard h1 { margin-bottom: 14px; }
+.dashboard-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.dashboard-panel { padding: 18px; }
+.dashboard-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.dashboard-heading strong { white-space: nowrap; }
+.dashboard-line { margin: 14px 0; }
+.dashboard-line button { text-align: left; overflow-wrap: anywhere; }
+.dashboard-line p, .dashboard-panel > p { color: var(--muted); font-size: .9rem; }
+.dashboard-track { display: flex; height: 10px; margin: 6px 0; border-radius: 10px; overflow: hidden; background: #edf2f7; }
+.dashboard-occupied { background: #267353; }
+.dashboard-empty { background: #b9d7c9; }
+.dashboard-unknown { background: #8795a8; }
+.dashboard-store-fill { background: #34658c; }
+@media (max-width: 720px) {
+  .dashboard-grid { grid-template-columns: 1fr; }
+  .dashboard-panel > .dashboard-heading { flex-wrap: wrap; }
+}

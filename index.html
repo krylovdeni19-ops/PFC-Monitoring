@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=101">
-  <script src="app.js?v=101" defer></script>
+  <link rel="stylesheet" href="style.css?v=102">
+  <script src="app.js?v=102" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -13,6 +13,7 @@
       <a class="brand" href="./"><span class="brand-mark" aria-hidden="true">П</span> ПФЦ Мониторинг</a>
       <nav class="view-nav" aria-label="Разделы склада">
         <a href="#stock-view" aria-current="page">Остатки</a>
+        <a href="#dashboard">Дашборд</a>
         <a href="#store-summary">Сводка по магазинам</a>
         <a href="#warehouse-map">Карта склада</a>
         <a href="#changes">Изменения</a>
@@ -104,6 +105,26 @@
         <div id="changes-table" class="table" tabindex="0" role="region" aria-label="Изменения по баркодам" hidden>
           <table><thead><tr><th>Баркод</th><th>Название</th><th>Было</th><th>Стало</th><th>Разница</th><th>Изменения по МХ</th></tr></thead><tbody id="changes-rows"></tbody></table>
         </div>
+      </div>
+    </section>
+
+    <section id="dashboard" hidden aria-labelledby="dashboard-title">
+      <h1 id="dashboard-title">Дашборд склада</h1>
+      <div class="dashboard-grid">
+        <section class="panel dashboard-panel">
+          <h2>Загрузка склада</h2>
+          <p id="dashboard-zones-status">Загрузите сохранённые остатки и справочник МХ.</p>
+          <div id="dashboard-zones"></div>
+        </section>
+        <section class="panel dashboard-panel">
+          <div class="dashboard-heading">
+            <h2>Остатки по магазинам</h2>
+            <label>Показатель <select id="dashboard-metric"><option value="units">Штуки</option><option value="locations">МХ</option></select></label>
+          </div>
+          <p id="dashboard-stores-status">Загрузите сохранённые остатки.</p>
+          <div id="dashboard-stores"></div>
+          <a href="#store-summary">Все магазины</a>
+        </section>
       </div>
     </section>
 

@@ -58,6 +58,17 @@ function summarizeStores(stock) {
   return [...groups.values()].sort((a, b) => b.units - a.units || a.name.localeCompare(b.name, 'ru'));
 }
 
+function showStoreStock(key) {
+  search.value = '';
+  stockFilter.value = '';
+  storeFilter.value = key;
+  renderStock();
+  if (location.hash !== '#stock-view') history.pushState(null, '', '#stock-view');
+  showView();
+  $('stock').scrollIntoView();
+  storeFilter.focus({preventScroll: true});
+}
+
 function renderStoreSummary() {
   const groups = summarizeStores(rows);
   const format = new Intl.NumberFormat('ru-RU');
@@ -74,14 +85,7 @@ function renderStoreSummary() {
     button.className = 'stock-map-link';
     button.textContent = group.name;
     button.addEventListener('click', () => {
-      search.value = '';
-      stockFilter.value = '';
-      storeFilter.value = group.key;
-      renderStock();
-      if (location.hash !== '#stock-view') history.pushState(null, '', '#stock-view');
-      showView();
-      $('stock').scrollIntoView();
-      storeFilter.focus({preventScroll: true});
+      showStoreStock(group.key);
     });
     tr.insertCell().append(button);
     for (const count of [group.locations.size, group.articles.size, group.units]) {
@@ -165,6 +169,7 @@ function acceptStock(data) {
   rows = data;
   updateStoreFilter();
   renderStoreSummary();
+  renderDashboardStores();
   $('stock').hidden = false;
   $('summary').hidden = false;
   status.textContent = 'МХ в отчёте: ' + new Set(rows.map(row => row[0])).size;
@@ -632,6 +637,87 @@ function openMapCell(address) {
   $('map-details').showModal();
 }
 
+function dashboardButton(label, action) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'stock-map-link';
+  button.textContent = label;
+  button.addEventListener('click', action);
+  return button;
+}
+
+function dashboardZoneCounts(catalog, cells) {
+  const zones = {pallets: [0, 0, 0], racks: [0, 0, 0]};
+  for (const [address, active] of catalog) {
+    if (!active) continue;
+    const state = cells.get(address)?.state;
+    zones[address.startsWith('01.01.') ? 'pallets' : 'racks'][
+      state === 'С товаром' ? 0 : state === 'Пусто' ? 1 : 2]++;
+  }
+  return zones;
+}
+
+function renderDashboardZones() {
+  const container = $('dashboard-zones');
+  container.replaceChildren();
+  const ready = Boolean(locationCatalog) && mapLoaded;
+  $('dashboard-zones-status').hidden = ready;
+  if (!ready) return;
+  const counts = dashboardZoneCounts(locationCatalog, mapCells);
+  for (const [zone, label] of [['pallets', 'Паллетные места'], ['racks', 'Стеллажи']]) {
+    const values = counts[zone];
+    const total = values.reduce((sum, value) => sum + value, 0);
+    const line = document.createElement('div');
+    line.className = 'dashboard-line';
+    const bar = document.createElement('div');
+    bar.className = 'dashboard-track';
+    bar.setAttribute('aria-hidden', 'true');
+    values.forEach((value, index) => {
+      const segment = document.createElement('span');
+      segment.className = ['dashboard-occupied', 'dashboard-empty', 'dashboard-unknown'][index];
+      segment.style.width = (total ? 100 * value / total : 0) + '%';
+      bar.append(segment);
+    });
+    const details = document.createElement('p');
+    details.textContent = 'Занято: ' + values[0] + ' · Пусто: ' + values[1] + ' · Не проверено: ' + values[2];
+    line.append(dashboardButton(label, () => {
+      mapZone.value = zone;
+      renderWarehouseMap();
+      location.hash = 'warehouse-map';
+    }), bar, details);
+    container.append(line);
+  }
+}
+
+function renderDashboardStores() {
+  const container = $('dashboard-stores');
+  container.replaceChildren();
+  const byUnits = $('dashboard-metric').value === 'units';
+  const metric = group => byUnits ? group.units : group.locations.size;
+  const groups = summarizeStores(rows).sort((a, b) => metric(b) - metric(a)).slice(0, 10);
+  $('dashboard-stores-status').textContent = groups.length ? 'До 10 групп по выбранному показателю.' : 'В загруженных остатках нет товаров.';
+  const format = new Intl.NumberFormat('ru-RU');
+  for (const group of groups) {
+    const line = document.createElement('div');
+    line.className = 'dashboard-line';
+    const header = document.createElement('div');
+    header.className = 'dashboard-heading';
+    const count = document.createElement('strong');
+    count.textContent = format.format(metric(group)) + (byUnits ? ' шт.' : ' МХ');
+    header.append(dashboardButton(group.name, () => showStoreStock(group.key)), count);
+    const bar = document.createElement('div');
+    bar.className = 'dashboard-track';
+    bar.setAttribute('aria-hidden', 'true');
+    const fill = document.createElement('span');
+    fill.className = 'dashboard-store-fill';
+    fill.style.width = (metric(groups[0]) ? 100 * metric(group) / metric(groups[0]) : 0) + '%';
+    bar.append(fill);
+    line.append(header, bar);
+    container.append(line);
+  }
+}
+$('dashboard-metric').addEventListener('change', renderDashboardStores);
+
 function renderWarehouseMap() {
   mapCells = new Map();
   for (const row of rows) {
@@ -644,6 +730,7 @@ function renderWarehouseMap() {
       entry.products.push(row);
     }
   }
+  renderDashboardZones();
   const totals = {occupied: 0, empty: 0, unknown: 0};
   const groups = warehouseGroups().map(({title, locations}) => {
     const card = document.createElement('section');
@@ -774,6 +861,7 @@ function acceptLocationCatalog(data) {
 window.addEventListener('pfc:locations', ({detail}) => {
   if (detail.error) {
     locationCatalog = null;
+    renderDashboardZones();
     $('locations-status').textContent = detail.error;
   } else acceptLocationCatalog(detail.rows);
 });
