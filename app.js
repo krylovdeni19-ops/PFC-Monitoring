@@ -133,7 +133,7 @@ updateScanZone();
 function startWarehouse(retry) {
   showScanError('');
   if (document.documentElement.dataset.pfcWarehouse !== 'ready') {
-    $('progress').textContent = 'Установите расширение ПФЦ 0.8.0 и обновите страницу.';
+    $('progress').textContent = 'Установите расширение ПФЦ 0.8.2 и обновите страницу.';
     return;
   }
   if (!address.validity.valid) {
@@ -279,7 +279,10 @@ const historyTo = $('history-to');
 function compareSavedScans(before, after) {
   const previous = new Map(before.cells);
   const latest = new Map(after.cells);
-  const missing = [...new Set([...previous.keys(), ...latest.keys()])]
+  const expected = before.palletRun && after.palletRun
+    ? Array.from({length: 350}, (_, i) => '01.01.' + String(i + 1).padStart(2, '0'))
+    : [...new Set([...previous.keys(), ...latest.keys()])];
+  const missing = expected
     .filter(mx => !previous.has(mx) || !latest.has(mx)).sort();
   const products = new Map();
   let checked = 0;
@@ -335,7 +338,7 @@ window.addEventListener('pfc:changes', ({detail: report}) => {
     select.replaceChildren(...scanHistory.map(item => {
       const option = document.createElement('option');
       option.value = item.id;
-      option.textContent = item.stamp + ' · МХ: ' + item.cells.length;
+      option.textContent = item.stamp + (item.palletRun ? ' · Паллеты: ' + item.cells.length + '/350' : ' · МХ: ' + item.cells.length);
       return option;
     }));
     select.value = scanHistory.some(item => item.id === selected)
