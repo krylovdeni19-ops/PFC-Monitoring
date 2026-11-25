@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=083">
+  <link rel="stylesheet" href="style.css?v=084">
   <script src="app.js?v=083" defer></script>
 </head>
 <body>
@@ -59,41 +59,44 @@
 
     </div>
 
-    <section id="changes" class="panel inventory" hidden aria-labelledby="changes-title">
-      <div class="inventory-header">
-        <div><h2 id="changes-title">Изменения остатков</h2><p id="changes-status" role="status">Загрузите сохранённые остатки.</p></div>
-      </div>
-      <form id="history-form" class="inventory-header" hidden>
-        <label>Режим сравнения
-          <select id="history-mode"><option value="auto">Последний полный обход</option><option value="manual">Выбрать два обхода</option></select>
-        </label>
-        <div id="history-selection" class="filters" hidden>
-          <label>Ранний обход (МСК)<select id="history-from"></select></label>
-          <label>Поздний обход (МСК)<select id="history-to"></select></label>
-        </div>
-      </form>
-      <dl id="changes-totals" class="changes-totals" aria-label="Итоги по сопоставленным МХ" hidden>
-        <div><dt>Прирост, шт.</dt><dd id="changes-gained" class="change-up"></dd></div>
-        <div><dt>Снижение, шт.</dt><dd id="changes-lost" class="change-down"></dd></div>
-        <div><dt>Чистая разница, шт.</dt><dd id="changes-net"></dd></div>
-        <div><dt>Возможные перемещения, БК</dt><dd id="changes-moves"></dd></div>
-      </dl>
-      <p id="changes-missing" class="changes-gap" hidden></p>
-      <div id="changes-tools" class="inventory-header" hidden>
-        <div class="filters">
-          <label>Поиск<input id="changes-search" type="search" placeholder="Баркод, название или МХ"></label>
-          <label>Тип изменения
-            <select id="changes-kind">
-              <option value="">Все изменения</option><option value="gain">Прирост</option>
-              <option value="loss">Снижение</option><option value="move">Возможное перемещение</option>
-            </select>
+    <section id="changes" class="view" hidden aria-labelledby="changes-title">
+      <header class="overview changes-overview">
+        <h1 id="changes-title">Изменения остатков</h1>
+        <p id="changes-status" role="status">Загрузите сохранённые остатки.</p>
+        <dl id="changes-totals" class="changes-totals" aria-label="Итоги по сопоставленным МХ" hidden>
+          <div><dt>Прирост, шт.</dt><dd id="changes-gained" class="change-up"></dd></div>
+          <div><dt>Снижение, шт.</dt><dd id="changes-lost" class="change-down"></dd></div>
+          <div><dt>Чистая разница, шт.</dt><dd id="changes-net"></dd></div>
+          <div><dt>Возможные перемещения, БК</dt><dd id="changes-moves"></dd></div>
+        </dl>
+      </header>
+      <div class="panel inventory">
+        <form id="history-form" class="inventory-header" hidden>
+          <label>Режим сравнения
+            <select id="history-mode"><option value="auto">Последний полный обход</option><option value="manual">Выбрать два обхода</option></select>
           </label>
+          <div id="history-selection" class="filters" hidden>
+            <label>Ранний обход (МСК)<select id="history-from"></select></label>
+            <label>Поздний обход (МСК)<select id="history-to"></select></label>
+          </div>
+        </form>
+        <p id="changes-missing" class="changes-gap" hidden></p>
+        <div id="changes-tools" class="inventory-header" hidden>
+          <div class="filters">
+            <label>Поиск<input id="changes-search" type="search" placeholder="Баркод, название или МХ"></label>
+            <label>Тип изменения
+              <select id="changes-kind">
+                <option value="">Все изменения</option><option value="gain">Прирост</option>
+                <option value="loss">Снижение</option><option value="move">Возможное перемещение</option>
+              </select>
+            </label>
+          </div>
+          <button type="button" id="changes-export" class="secondary">Скачать CSV</button>
+          <p id="changes-visible" role="status"></p>
         </div>
-        <button type="button" id="changes-export" class="secondary">Скачать CSV</button>
-        <p id="changes-visible" role="status"></p>
-      </div>
-      <div id="changes-table" class="table" tabindex="0" role="region" aria-label="Изменения по баркодам" hidden>
-        <table><thead><tr><th>Баркод</th><th>Название</th><th>Было</th><th>Стало</th><th>Разница</th><th>Изменения по МХ</th></tr></thead><tbody id="changes-rows"></tbody></table>
+        <div id="changes-table" class="table" tabindex="0" role="region" aria-label="Изменения по баркодам" hidden>
+          <table><thead><tr><th>Баркод</th><th>Название</th><th>Было</th><th>Стало</th><th>Разница</th><th>Изменения по МХ</th></tr></thead><tbody id="changes-rows"></tbody></table>
+        </div>
       </div>
     </section>
 

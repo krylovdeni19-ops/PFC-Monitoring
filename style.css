@@ -123,3 +123,13 @@ summary { cursor: pointer; font-weight: 650; }
 
 #changes-tools { border-top: 1px solid var(--line); }
 #changes-visible { width: 100%; color: var(--muted); font-size: .9rem; }
+
+.changes-overview #changes-status { margin-top: 10px; color: #dbe7f1; overflow-wrap: anywhere; }
+.changes-overview .changes-totals { margin-top: 24px; padding: 0; }
+.changes-overview .changes-totals > div { padding: 13px; border-color: #ffffff30; background: #ffffff12; }
+.changes-overview .changes-totals dt { color: #e0edf6; }
+.changes-overview .changes-totals dd { color: #fff; font-size: clamp(1.4rem, 3vw, 2rem); line-height: 1.2; }
+.changes-overview .changes-totals .change-up { color: #c9f77b; }
+.changes-overview .changes-totals .change-down { color: #ffc6cb; }
+#changes #history-form { border-top: 0; }
+#changes .changes-gap { margin-top: 14px; }
