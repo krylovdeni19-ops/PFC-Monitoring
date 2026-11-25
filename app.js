@@ -125,8 +125,14 @@ function startWarehouse(retry) {
     $('progress').textContent = 'Установите расширение ПФЦ 0.7.1 и обновите страницу.';
     return;
   }
-  if (!address.validity.valid) $('read-settings').open = true;
-  if (!writer.value.trim() || !writer.validity.valid) $('scan-settings').open = true;
+  if (!address.validity.valid) {
+    location.hash = 'settings';
+    $('read-settings').open = true;
+  }
+  if (!writer.value.trim() || !writer.validity.valid) {
+    location.hash = 'settings';
+    $('scan-settings').open = true;
+  }
   if (!address.reportValidity() || !writer.value.trim() || !writer.reportValidity()) {
     $('scan-settings').open = true;
     $('progress').textContent = 'Укажите ссылки чтения и записи Apps Script.';
@@ -181,11 +187,36 @@ function autoLoad() {
 }
 window.addEventListener('load', autoLoad, {once: true});
 
+function possibleMovement(item) {
+  return item.now === item.was &&
+    item.cells.some(cell => cell.now > cell.was) &&
+    item.cells.some(cell => cell.now < cell.was);
+}
+
+function summarizeChanges(products) {
+  let gained = 0;
+  let lost = 0;
+  let moves = 0;
+  for (const item of products) {
+    const delta = item.now - item.was;
+    gained += Math.max(0, delta);
+    lost += Math.max(0, -delta);
+    if (possibleMovement(item)) moves++;
+  }
+  return {gained, lost, net: gained - lost, moves};
+}
+
+function formatChange(value) {
+  const absolute = Math.abs(value).toLocaleString('ru-RU');
+  return value > 0 ? '+' + absolute : value < 0 ? '−' + absolute : absolute;
+}
+
 function renderChanges(report) {
   const status = $('changes-status');
   const body = $('changes-rows');
   const missing = $('changes-missing');
   body.replaceChildren();
+  $('changes-totals').hidden = true;
   missing.hidden = true;
   $('changes-table').hidden = true;
   if (!report || report.unavailable || report.error) {
@@ -199,6 +230,14 @@ function renderChanges(report) {
     ' · Товаров с изменениями: ' + report.products.length;
   missing.hidden = !report.missing.length;
   missing.textContent = 'МХ без пары для сравнения: ' + report.missing.join(', ');
+  if (report.checked > 0) {
+    const {gained, lost, net, moves} = summarizeChanges(report.products);
+    $('changes-gained').textContent = formatChange(gained);
+    $('changes-lost').textContent = formatChange(-lost);
+    $('changes-net').textContent = formatChange(net);
+    $('changes-moves').textContent = moves.toLocaleString('ru-RU');
+    $('changes-totals').hidden = false;
+  }
   $('changes-table').hidden = !report.products.length;
   for (const item of report.products) {
     const row = body.insertRow();
@@ -208,7 +247,7 @@ function renderChanges(report) {
     }
     const list = document.createElement('details');
     const title = document.createElement('summary');
-    title.textContent = delta === 0 && item.cells.length > 1 ? 'Возможное перемещение' : 'МХ: ' + item.cells.length;
+    title.textContent = possibleMovement(item) ? 'Возможное перемещение' : 'МХ: ' + item.cells.length;
     list.append(title);
     for (const cell of item.cells) {
       const line = document.createElement('div');
@@ -292,3 +331,19 @@ window.addEventListener('pfc:changes', ({detail: report}) => {
   }
   renderHistory();
 });
+
+const viewLinks = [...document.querySelectorAll('.view-nav a')];
+function showView() {
+  const current = viewLinks.find(link => link.hash === location.hash) || viewLinks[0];
+  for (const link of viewLinks) {
+    const active = link === current;
+    $(link.hash.slice(1)).hidden = !active;
+    if (active) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  }
+}
+window.addEventListener('hashchange', () => {
+  showView();
+  window.scrollTo(0, 0);
+});
+showView();

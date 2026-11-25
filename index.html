@@ -4,17 +4,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=075">
-  <script src="app.js?v=075" defer></script>
+  <link rel="stylesheet" href="style.css?v=077">
+  <script src="app.js?v=077" defer></script>
 </head>
 <body>
   <header class="topbar">
     <div class="topbar-inner">
       <a class="brand" href="./"><span class="brand-mark" aria-hidden="true">П</span> ПФЦ Мониторинг</a>
-      <nav><a class="toplink" href="#changes">Изменения</a> <a class="toplink" href="#settings">Настройки</a></nav>
+      <nav class="view-nav" aria-label="Разделы склада">
+        <a href="#stock-view" aria-current="page">Остатки</a>
+        <a href="#changes">Изменения</a>
+        <a href="#settings">Настройки</a>
+      </nav>
     </div>
   </header>
   <main>
+    <div id="stock-view" class="view">
     <section class="overview" aria-labelledby="title">
       <div class="overview-top">
         <div>
@@ -51,7 +56,9 @@
       </div>
     </section>
 
-    <section id="changes" class="panel inventory" aria-labelledby="changes-title">
+    </div>
+
+    <section id="changes" class="panel inventory" hidden aria-labelledby="changes-title">
       <div class="inventory-header">
         <div><h2 id="changes-title">Изменения остатков</h2><p id="changes-status" role="status">Загрузите сохранённые остатки.</p></div>
       </div>
@@ -64,13 +71,19 @@
           <label>Поздний обход (МСК)<select id="history-to"></select></label>
         </div>
       </form>
+      <dl id="changes-totals" class="changes-totals" aria-label="Итоги по сопоставленным МХ" hidden>
+        <div><dt>Прирост, шт.</dt><dd id="changes-gained" class="change-up"></dd></div>
+        <div><dt>Снижение, шт.</dt><dd id="changes-lost" class="change-down"></dd></div>
+        <div><dt>Чистая разница, шт.</dt><dd id="changes-net"></dd></div>
+        <div><dt>Возможные перемещения, БК</dt><dd id="changes-moves"></dd></div>
+      </dl>
       <p id="changes-missing" class="changes-gap" hidden></p>
       <div id="changes-table" class="table" tabindex="0" role="region" aria-label="Изменения по баркодам" hidden>
         <table><thead><tr><th>Баркод</th><th>Название</th><th>Было</th><th>Стало</th><th>Разница</th><th>Изменения по МХ</th></tr></thead><tbody id="changes-rows"></tbody></table>
       </div>
     </section>
 
-    <section id="settings" class="panel settings" aria-labelledby="settings-title">
+    <section id="settings" class="panel settings" hidden aria-labelledby="settings-title">
       <h2 id="settings-title">Подключение</h2>
       <details id="read-settings">
         <summary>Чтение Google Таблицы</summary>
