@@ -1204,7 +1204,7 @@ function refreshTransactions() {
 }
 
 transactionsButton.addEventListener('click', refreshTransactions);
-window.addEventListener('load', refreshTransactions, {once: true});
+
 
 window.addEventListener('pfc:transactions-result', ({detail}) => {
   if (!transactionsButton.disabled) return;
@@ -1221,3 +1221,21 @@ window.addEventListener('pfc:transactions-result', ({detail}) => {
   transactionsStatus.textContent = date + ' · ПФЦ 399276 · ' + (Number.isFinite(prepared)
     ? 'По загруженным строкам WB' : 'В загруженных строках WB нет подготовки к отгрузке.');
 });
+
+const transactionsRoot = document.documentElement;
+if (transactionsRoot.dataset.pfcTransactions === 'ready') {
+  refreshTransactions();
+} else {
+  transactionsStatus.textContent = 'Ждём подключения расширения для чтения транзакций…';
+  const ready = new MutationObserver(() => {
+    if (transactionsRoot.dataset.pfcTransactions !== 'ready') return;
+    ready.disconnect();
+    clearTimeout(readyTimeout);
+    refreshTransactions();
+  });
+  const readyTimeout = setTimeout(() => {
+    ready.disconnect();
+    transactionsStatus.textContent = 'Расширение для транзакций не подключилось. Проверьте версию 0.11.0 и обновите страницу.';
+  }, 8000);
+  ready.observe(transactionsRoot, {attributes: true, attributeFilter: ['data-pfc-transactions']});
+}
