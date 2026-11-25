@@ -120,3 +120,6 @@ summary { cursor: pointer; font-weight: 650; }
 #map-details { border: 1px solid var(--line); border-radius: 12px; width: min(560px, 90vw); color: var(--ink); }
 #map-details form { float: right; }
 #map-details::backdrop { background: #12243b8c; }
+
+#changes-tools { border-top: 1px solid var(--line); }
+#changes-visible { width: 100%; color: var(--muted); font-size: .9rem; }

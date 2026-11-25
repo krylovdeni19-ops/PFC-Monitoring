@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=082">
-  <script src="app.js?v=082" defer></script>
+  <link rel="stylesheet" href="style.css?v=083">
+  <script src="app.js?v=083" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -79,6 +79,19 @@
         <div><dt>Возможные перемещения, БК</dt><dd id="changes-moves"></dd></div>
       </dl>
       <p id="changes-missing" class="changes-gap" hidden></p>
+      <div id="changes-tools" class="inventory-header" hidden>
+        <div class="filters">
+          <label>Поиск<input id="changes-search" type="search" placeholder="Баркод, название или МХ"></label>
+          <label>Тип изменения
+            <select id="changes-kind">
+              <option value="">Все изменения</option><option value="gain">Прирост</option>
+              <option value="loss">Снижение</option><option value="move">Возможное перемещение</option>
+            </select>
+          </label>
+        </div>
+        <button type="button" id="changes-export" class="secondary">Скачать CSV</button>
+        <p id="changes-visible" role="status"></p>
+      </div>
       <div id="changes-table" class="table" tabindex="0" role="region" aria-label="Изменения по баркодам" hidden>
         <table><thead><tr><th>Баркод</th><th>Название</th><th>Было</th><th>Стало</th><th>Разница</th><th>Изменения по МХ</th></tr></thead><tbody id="changes-rows"></tbody></table>
       </div>

@@ -223,7 +223,23 @@ function formatChange(value) {
   return value > 0 ? '+' + absolute : value < 0 ? '−' + absolute : absolute;
 }
 
+let displayedComparison;
+
+function selectChanges(products, search, kind) {
+  const query = search.trim().toLocaleLowerCase('ru');
+  return products.filter(item => {
+    if (kind === 'gain' && item.now <= item.was) return false;
+    if (kind === 'loss' && item.now >= item.was) return false;
+    if (kind === 'move' && !possibleMovement(item)) return false;
+    return [item.barcode, item.name, ...item.cells.map(cell => cell.mx)]
+      .some(value => String(value).toLocaleLowerCase('ru').includes(query));
+  });
+}
+
 function renderChanges(report) {
+  displayedComparison = report;
+  $('changes-tools').hidden = true;
+  $('changes-visible').textContent = '';
   const status = $('changes-status');
   const body = $('changes-rows');
   const missing = $('changes-missing');
@@ -250,8 +266,12 @@ function renderChanges(report) {
     $('changes-moves').textContent = moves.toLocaleString('ru-RU');
     $('changes-totals').hidden = false;
   }
-  $('changes-table').hidden = !report.products.length;
-  for (const item of report.products) {
+  $('changes-tools').hidden = !report.products.length;
+  const filtered = selectChanges(report.products, $('changes-search').value, $('changes-kind').value);
+  $('changes-visible').textContent = 'Показано: ' + filtered.length + ' из ' + report.products.length;
+  $('changes-export').disabled = !filtered.length;
+  $('changes-table').hidden = !filtered.length;
+  for (const item of filtered) {
     const row = body.insertRow();
     const delta = item.now - item.was;
     for (const value of [item.barcode, item.name, item.was, item.now, delta > 0 ? '+' + delta : delta]) {
@@ -269,6 +289,38 @@ function renderChanges(report) {
     row.insertCell().append(list);
   }
 }
+
+function changesCsv(report, products) {
+  const escape = value => {
+    const text = String(value ?? '');
+    const safe = typeof value === 'string' && /^[\s\uFEFF]*[=+@-]|^[\t\r\n]/u.test(text) ? "'" + text : text;
+    return '"' + safe.replaceAll('"', '""') + '"';
+  };
+  const records = [['Ранний замер МСК', 'Поздний замер МСК', 'Баркод', 'Название', 'Было', 'Стало',
+    'Разница', 'Изменения по МХ', 'Возможное перемещение']];
+  for (const item of products) {
+    records.push([report.from, report.to, item.barcode, item.name, item.was, item.now, item.now - item.was,
+      item.cells.map(cell => cell.mx + ': ' + cell.was + ' → ' + cell.now).join(', '),
+      possibleMovement(item) ? 'Да' : '']);
+  }
+  return '\uFEFF' + records.map(row => row.map(escape).join(';')).join('\r\n');
+}
+
+for (const [id, event] of [['changes-search', 'input'], ['changes-kind', 'change']]) {
+  $(id).addEventListener(event, () => renderChanges(displayedComparison));
+}
+$('changes-export').onclick = () => {
+  if (!displayedComparison?.products) return;
+  const selected = selectChanges(displayedComparison.products, $('changes-search').value, $('changes-kind').value);
+  if (!selected.length) return;
+  const file = new Blob([changesCsv(displayedComparison, selected)], {type: 'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(file);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'pfc-izmeneniya.csv';
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
 
 let automaticReport;
 let scanHistory = [];
