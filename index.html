@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=074">
-  <script src="app.js?v=074" defer></script>
+  <link rel="stylesheet" href="style.css?v=075">
+  <script src="app.js?v=075" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -55,6 +55,15 @@
       <div class="inventory-header">
         <div><h2 id="changes-title">Изменения остатков</h2><p id="changes-status" role="status">Загрузите сохранённые остатки.</p></div>
       </div>
+      <form id="history-form" class="inventory-header" hidden>
+        <label>Режим сравнения
+          <select id="history-mode"><option value="auto">Последний полный обход</option><option value="manual">Выбрать два обхода</option></select>
+        </label>
+        <div id="history-selection" class="filters" hidden>
+          <label>Ранний обход (МСК)<select id="history-from"></select></label>
+          <label>Поздний обход (МСК)<select id="history-to"></select></label>
+        </div>
+      </form>
       <p id="changes-missing" class="changes-gap" hidden></p>
       <div id="changes-table" class="table" tabindex="0" role="region" aria-label="Изменения по баркодам" hidden>
         <table><thead><tr><th>Баркод</th><th>Название</th><th>Было</th><th>Стало</th><th>Разница</th><th>Изменения по МХ</th></tr></thead><tbody id="changes-rows"></tbody></table>

@@ -78,3 +78,6 @@ summary { cursor: pointer; font-weight: 650; }
 #changes table { min-width: 640px; }
 #changes td:nth-child(2) { white-space: normal; }
 .changes-gap { margin: 0 20px 14px; color: var(--muted); overflow-wrap: anywhere; }
+
+#history-form { justify-content: flex-start; border-top: 1px solid var(--line); }
+#history-selection label { min-width: min(220px, 100%); }

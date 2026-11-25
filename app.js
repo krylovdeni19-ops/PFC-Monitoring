@@ -181,7 +181,7 @@ function autoLoad() {
 }
 window.addEventListener('load', autoLoad, {once: true});
 
-window.addEventListener('pfc:changes', ({detail: report}) => {
+function renderChanges(report) {
   const status = $('changes-status');
   const body = $('changes-rows');
   const missing = $('changes-missing');
@@ -194,11 +194,11 @@ window.addEventListener('pfc:changes', ({detail: report}) => {
       : 'Для сравнения обновите расширение и приложение чтения.');
     return;
   }
-  status.textContent = 'Обход по ' + report.to + ' МСК · Сопоставлено МХ: ' + report.checked +
-    (report.from ? ' · Предыдущие замеры по ' + report.from + ' МСК' : '') +
+  status.textContent = (report.manual ? 'Выбранный обход: ' : 'Обход по ') + report.to + ' МСК · Сопоставлено МХ: ' + report.checked +
+    (report.from ? (report.manual ? ' · Сравнение с ' : ' · Предыдущие замеры по ') + report.from + ' МСК' : '') +
     ' · Товаров с изменениями: ' + report.products.length;
   missing.hidden = !report.missing.length;
-  missing.textContent = 'Без предыдущего замера: ' + report.missing.join(', ');
+  missing.textContent = 'МХ без пары для сравнения: ' + report.missing.join(', ');
   $('changes-table').hidden = !report.products.length;
   for (const item of report.products) {
     const row = body.insertRow();
@@ -217,4 +217,78 @@ window.addEventListener('pfc:changes', ({detail: report}) => {
     }
     row.insertCell().append(list);
   }
+}
+
+let automaticReport;
+let scanHistory = [];
+const historyMode = $('history-mode');
+const historyFrom = $('history-from');
+const historyTo = $('history-to');
+
+function compareSavedScans(before, after) {
+  const previous = new Map(before.cells);
+  const latest = new Map(after.cells);
+  const missing = [...new Set([...previous.keys(), ...latest.keys()])]
+    .filter(mx => !previous.has(mx) || !latest.has(mx)).sort();
+  const products = new Map();
+  let checked = 0;
+  for (const [mx, current] of latest) {
+    if (!previous.has(mx)) continue;
+    checked++;
+    const oldByCode = new Map(previous.get(mx).map(item => [item[0], item]));
+    const newByCode = new Map(current.map(item => [item[0], item]));
+    for (const barcode of new Set([...oldByCode.keys(), ...newByCode.keys()])) {
+      const oldItem = oldByCode.get(barcode);
+      const newItem = newByCode.get(barcode);
+      const was = oldItem?.[2] ?? 0;
+      const now = newItem?.[2] ?? 0;
+      if (!products.has(barcode)) products.set(barcode, {
+        barcode, name: (newItem || oldItem)[1], was: 0, now: 0, cells: []
+      });
+      const product = products.get(barcode);
+      product.was += was;
+      product.now += now;
+      if (was !== now) product.cells.push({mx, was, now});
+    }
+  }
+  const changed = [...products.values()].filter(item => item.cells.length)
+    .sort((a, b) => Math.abs(b.now - b.was) - Math.abs(a.now - a.was));
+  return {manual: true, from: before.stamp, to: after.stamp, checked, missing, products: changed};
+}
+
+function renderHistory() {
+  const manual = historyMode.value === 'manual';
+  $('history-selection').hidden = !manual;
+  if (!manual) {
+    renderChanges(automaticReport);
+    return;
+  }
+  const earlier = scanHistory.findIndex(item => item.id === historyFrom.value);
+  const later = scanHistory.findIndex(item => item.id === historyTo.value);
+  if (later < 0 || earlier <= later) {
+    renderChanges({error: 'Выберите два разных обхода. Первый должен быть раньше второго.'});
+    return;
+  }
+  renderChanges(compareSavedScans(scanHistory[earlier], scanHistory[later]));
+}
+
+$('history-form').addEventListener('submit', event => event.preventDefault());
+for (const field of [historyMode, historyFrom, historyTo]) field.addEventListener('change', renderHistory);
+window.addEventListener('pfc:changes', ({detail: report}) => {
+  automaticReport = report;
+  scanHistory = report?.snapshots ?? [];
+  $('history-form').hidden = scanHistory.length < 2;
+  if (scanHistory.length < 2) historyMode.value = 'auto';
+  for (const [select, fallback] of [[historyFrom, 1], [historyTo, 0]]) {
+    const selected = select.value;
+    select.replaceChildren(...scanHistory.map(item => {
+      const option = document.createElement('option');
+      option.value = item.id;
+      option.textContent = item.stamp + ' · МХ: ' + item.cells.length;
+      return option;
+    }));
+    select.value = scanHistory.some(item => item.id === selected)
+      ? selected : scanHistory[fallback]?.id ?? '';
+  }
+  renderHistory();
 });
