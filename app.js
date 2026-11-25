@@ -47,7 +47,13 @@ function renderStock() {
         link.target = '_blank';
         link.rel = 'noopener noreferrer';
         link.textContent = article;
-        cell.append(link);
+        const lookup = document.createElement('button');
+        lookup.type = 'button';
+        lookup.className = 'stock-seller-link';
+        lookup.textContent = 'Найти продавца';
+        lookup.setAttribute('aria-label', 'Найти продавца по артикулу ' + article);
+        lookup.addEventListener('click', () => openSellerDetails(article));
+        cell.append(link, lookup);
         return;
       }
       if (index !== 1) {
@@ -688,4 +694,32 @@ window.addEventListener('pfc:locations-saved', ({detail}) => {
     clearLocationPreview();
   }
   $('locations-status').textContent = detail.error || 'Справочник сохранён.';
+});
+
+let sellerRequestId = 0;
+function openSellerDetails(article) {
+  const dialog = $('seller-details');
+  const requestId = ++sellerRequestId;
+  $('seller-fields').hidden = true;
+  $('seller-title').textContent = 'Продавец · ' + article;
+  dialog.showModal();
+  if (document.documentElement.dataset.pfcSeller !== 'ready') {
+    $('seller-status').textContent = 'Обновите расширение ПФЦ до 0.9.0 и перезагрузите страницу.';
+    return;
+  }
+  $('seller-status').textContent = 'Ищем продавца на Wildberries и сохраняем в Google Таблицу…';
+  window.dispatchEvent(new CustomEvent('pfc:seller-find', {detail: {article, requestId, writer: writer.value.trim()}}));
+}
+
+window.addEventListener('pfc:seller-result', event => {
+  const {requestId, seller, saved, saveError, error} = event.detail;
+  if (requestId !== sellerRequestId || !$('seller-details').open) return;
+  $('seller-status').textContent = error || (saved ? 'Записано в лист «Продавцы WB».' : 'Продавец найден. Ошибка записи: ' + (saveError || 'обновите расширение.'));
+  if (!seller || !/^[1-9]\d*$/.test(seller.id)) return;
+  const store = $('seller-store');
+  store.href = 'https://www.wildberries.ru/seller/' + seller.id;
+  store.textContent = seller.name || 'Открыть витрину WB';
+  $('seller-legal').textContent = seller.legalName || 'Не указано на WB';
+  $('seller-email').textContent = seller.email || 'Не указана на WB';
+  $('seller-fields').hidden = false;
 });

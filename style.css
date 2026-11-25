@@ -150,3 +150,27 @@ summary { cursor: pointer; font-weight: 650; }
   min-height: 0;
   padding: 0;
 }
+
+.stock-seller-link {
+  display: block;
+  min-height: 0;
+  padding: 3px 0;
+  border: 0;
+  background: none;
+  color: #205b8c;
+  font-size: .82rem;
+  text-align: left;
+  text-decoration: underline;
+}
+
+#seller-details {
+  width: min(540px, calc(100% - 32px));
+  padding: 22px;
+  border: 1px solid #d4dce5;
+  border-radius: 14px;
+}
+
+#seller-details::backdrop { background: #14263a80; }
+#seller-details form { display: flex; justify-content: flex-end; }
+#seller-fields dt { font-weight: 700; }
+#seller-fields dd { margin: 4px 0 14px; overflow-wrap: anywhere; }

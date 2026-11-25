@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=088">
-  <script src="app.js?v=088" defer></script>
+  <link rel="stylesheet" href="style.css?v=090">
+  <script src="app.js?v=090" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -170,5 +170,15 @@
       </details>
     </section>
   </main>
+  <dialog id="seller-details" aria-labelledby="seller-title">
+    <form method="dialog"><button class="secondary">Закрыть</button></form>
+    <h2 id="seller-title">Продавец на Wildberries</h2>
+    <p id="seller-status" role="status"></p>
+    <dl id="seller-fields" hidden>
+      <dt>Магазин WB</dt><dd><a id="seller-store" target="_blank" rel="noopener noreferrer"></a></dd>
+      <dt>Продавец</dt><dd id="seller-legal"></dd>
+      <dt>Электронная почта</dt><dd id="seller-email"></dd>
+    </dl>
+  </dialog>
 </body>
 </html>
