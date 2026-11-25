@@ -309,7 +309,10 @@ window.addEventListener('pfc:scan-progress', ({detail: job}) => {
     scan: 'Проверяем ' + (job.current || 'МХ'), save: 'Записываем обход в Google Таблицу',
     done: job.savedCells ? 'Обход записан' : 'Обход завершён. Новых результатов нет', error: 'Операция остановилась', interrupted: 'Обход прерван'
   };
-  $('progress').textContent = label[job.phase] + '. ' + tally + (job.error ? '. ' + job.error : '');
+  const seconds = ms => (ms / 1000).toLocaleString('ru-RU', {maximumFractionDigits: 1}) + ' с';
+  const timing = Number.isFinite(job.wbMs) && Number.isFinite(job.googleMs)
+    ? ' · WB: ' + seconds(job.wbMs) + ' · Google: ' + seconds(job.googleMs) : '';
+  $('progress').textContent = label[job.phase] + '. ' + tally + timing + (job.error ? '. ' + job.error : '');
   const issues = $('issues');
   issues.hidden = !job.failed.length;
   issues.querySelector('ul').replaceChildren(...job.failed.map(item => {
