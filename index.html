@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=077">
-  <script src="app.js?v=077" defer></script>
+  <link rel="stylesheet" href="style.css?v=078">
+  <script src="app.js?v=078" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -13,6 +13,7 @@
       <a class="brand" href="./"><span class="brand-mark" aria-hidden="true">П</span> ПФЦ Мониторинг</a>
       <nav class="view-nav" aria-label="Разделы склада">
         <a href="#stock-view" aria-current="page">Остатки</a>
+        <a href="#warehouse-map">Карта склада</a>
         <a href="#changes">Изменения</a>
         <a href="#settings">Настройки</a>
       </nav>
@@ -81,6 +82,21 @@
       <div id="changes-table" class="table" tabindex="0" role="region" aria-label="Изменения по баркодам" hidden>
         <table><thead><tr><th>Баркод</th><th>Название</th><th>Было</th><th>Стало</th><th>Разница</th><th>Изменения по МХ</th></tr></thead><tbody id="changes-rows"></tbody></table>
       </div>
+    </section>
+
+    <section id="warehouse-map" class="panel settings" hidden aria-labelledby="map-title">
+      <h2 id="map-title">Карта склада</h2>
+      <div class="map-tools">
+        <label>Зона <select id="map-zone"><option value="racks">Стеллажи 02–10</option><option value="pallets">Паллетные места</option></select></label>
+        <form id="map-find"><label>Найти МХ <input id="map-address" placeholder="02.01.03" required></label><button class="secondary">Найти</button></form>
+      </div>
+      <p id="map-status" role="status">Загрузите остатки, чтобы увидеть занятость.</p>
+      <ul class="map-legend"><li><span class="occupied"></span>С товаром</li><li><span class="empty"></span>Пусто</li><li><span class="unknown"></span>Не проверено</li></ul>
+      <div id="map-grid" class="map-grid"></div>
+      <dialog id="map-details" aria-labelledby="map-cell-title">
+        <form method="dialog"><button class="secondary" aria-label="Закрыть карточку МХ">Закрыть</button></form>
+        <h2 id="map-cell-title"></h2><p id="map-cell-status"></p><ul id="map-products"></ul>
+      </dialog>
     </section>
 
     <section id="settings" class="panel settings" hidden aria-labelledby="settings-title">

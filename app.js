@@ -53,6 +53,8 @@ function acceptStock(data) {
   $('summary').hidden = false;
   status.textContent = 'МХ в отчёте: ' + new Set(rows.map(row => row[0])).size;
   renderSummary();
+  mapLoaded = true;
+  renderWarehouseMap();
   renderStock();
   return true;
 }
@@ -331,6 +333,115 @@ window.addEventListener('pfc:changes', ({detail: report}) => {
   }
   renderHistory();
 });
+
+const mapZone = $('map-zone');
+let mapLoaded = false;
+let mapCells = new Map();
+const addressPart = number => String(number).padStart(2, '0');
+
+function warehouseGroups() {
+  if (mapZone.value === 'pallets') {
+    return Array.from({length: 14}, (_, group) => {
+      const start = group * 25 + 1;
+      return {
+        title: 'Места ' + start + '–' + (start + 24),
+        locations: Array.from({length: 25}, (_, i) => {
+          const label = addressPart(start + i);
+          return ['01.01.' + label, label];
+        })
+      };
+    });
+  }
+  return Array.from({length: 9}, (_, group) => {
+    const rack = addressPart(group + 2);
+    return {
+      title: 'Стеллаж ' + rack,
+      locations: Array.from({length: 15}, (_, i) => {
+        const shelf = addressPart(Math.floor(i / 3) + 1);
+        const cell = addressPart(i % 3 + 1);
+        return [rack + '.' + shelf + '.' + cell, shelf + '.' + cell];
+      })
+    };
+  });
+}
+
+function openMapCell(address) {
+  $('map-cell-title').textContent = 'МХ ' + address;
+  const entry = mapCells.get(address);
+  const state = entry?.state || 'Не проверено';
+  $('map-cell-status').textContent = entry?.time ? state + ' · Проверено МСК: ' + entry.time : state;
+  const items = entry?.products || [];
+  $('map-products').replaceChildren(...items.map(row => {
+    const item = document.createElement('li');
+    item.textContent = row[3] + ' · ' + row[2] + ' · ' + row[4] + ' шт.';
+    return item;
+  }));
+  $('map-details').showModal();
+}
+
+function renderWarehouseMap() {
+  mapCells = new Map();
+  for (const row of rows) {
+    const [address, state, , , , , , time] = row;
+    if (state !== 'С товаром' && state !== 'Ничего не найдено') continue;
+    if (!mapCells.has(address)) mapCells.set(address, {state: 'Пусто', time, products: []});
+    const entry = mapCells.get(address);
+    if (state === 'С товаром') {
+      entry.state = state;
+      entry.products.push(row);
+    }
+  }
+  const totals = {occupied: 0, empty: 0, unknown: 0};
+  const groups = warehouseGroups().map(({title, locations}) => {
+    const card = document.createElement('section');
+    const heading = document.createElement('h3');
+    heading.textContent = title;
+    const cells = document.createElement('div');
+    cells.className = 'map-cells ' + (mapZone.value === 'pallets' ? 'pallets' : '');
+    for (const [address, label] of locations) {
+      const state = mapCells.get(address)?.state;
+      const color = state === 'С товаром' ? 'occupied' : state === 'Пусто' ? 'empty' : 'unknown';
+      totals[color]++;
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = color;
+      button.dataset.address = address;
+      button.textContent = label;
+      button.title = address + ' · ' + (state || 'Не проверено');
+      button.setAttribute('aria-label', button.title);
+      cells.append(button);
+    }
+    card.append(heading, cells);
+    return card;
+  });
+  $('map-grid').replaceChildren(...groups);
+  $('map-status').textContent = mapLoaded
+    ? 'С товаром: ' + totals.occupied + ' · Пусто: ' + totals.empty + ' · Не проверено: ' + totals.unknown
+    : 'Загрузите остатки, чтобы увидеть занятость.';
+}
+
+mapZone.addEventListener('change', renderWarehouseMap);
+$('map-grid').addEventListener('click', event => {
+  const cell = event.target.closest('button[data-address]');
+  if (cell) openMapCell(cell.dataset.address);
+});
+$('map-find').addEventListener('submit', event => {
+  event.preventDefault();
+  const address = $('map-address').value.trim();
+  const input = $('map-address');
+  mapZone.value = address.startsWith('01.01.') ? 'pallets' : 'racks';
+  renderWarehouseMap();
+  const cell = [...$('map-grid').querySelectorAll('button')].find(button => button.dataset.address === address);
+  if (!cell) {
+    input.setCustomValidity('Введите адрес из карты склада, например 02.01.03.');
+    input.reportValidity();
+    return;
+  }
+  cell.focus();
+  openMapCell(address);
+});
+$('map-address').addEventListener('input', event => event.target.setCustomValidity(''));
+renderWarehouseMap();
 
 const viewLinks = [...document.querySelectorAll('.view-nav a')];
 function showView() {
