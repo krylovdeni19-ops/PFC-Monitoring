@@ -217,6 +217,7 @@ function renderSummary() {
   }
   const occupied = [...cells.values()].filter(result => result === 'С товаром').length;
   const summary = $('summary');
+  const transactionsCard = $('transactions-card');
   summary.replaceChildren();
   for (const [name, value] of [['МХ в отчёте', cells.size], ['С товаром', occupied],
     ['Пустых МХ', cells.size - occupied], ['Баркодов', barcodes.size], ['Всего штук', total]]) {
@@ -226,6 +227,7 @@ function renderSummary() {
     card.append(number, document.createTextNode(name));
     summary.append(card);
   }
+  summary.append(transactionsCard);
   if (latest) {
     const time = document.createElement('p');
     time.textContent = 'Последняя проверка по МСК: ' + latest;
@@ -1186,17 +1188,17 @@ const transactionsButton = $('transactions-refresh');
 const transactionsStatus = $('transactions-status');
 let transactionsTimeout;
 transactionsButton.addEventListener('click', () => {
-  $('transactions-totals').hidden = true;
+  $('transactions-prepared').textContent = '—';
   if (document.documentElement.dataset.pfcTransactions !== 'ready') {
-    transactionsStatus.textContent = 'Обновите расширение ПФЦ до 0.10.7 и перезагрузите страницу.';
+    transactionsStatus.textContent = 'Обновите расширение ПФЦ до 0.10.8 и перезагрузите страницу.';
     return;
   }
   transactionsButton.disabled = true;
-  transactionsStatus.textContent = 'Читаем загруженные строки «Мой ПФЦ»…';
+  transactionsStatus.textContent = 'Открываем «Все транзакции» в фоне…';
   transactionsTimeout = setTimeout(() => {
     transactionsStatus.textContent = 'Расширение не ответило. Повторите чтение.';
     transactionsButton.disabled = false;
-  }, 15000);
+  }, 24000);
   sendWarehouse('pfc:transactions');
 });
 
@@ -1209,11 +1211,9 @@ window.addEventListener('pfc:transactions-result', ({detail}) => {
     return;
   }
   const {date, totals} = detail.data;
-  for (const key of ['prepared', 'assembled', 'labeled']) {
-    const value = totals[key];
-    $('transactions-' + key).textContent = Number.isFinite(value)
-      ? value.toLocaleString('ru-RU') + ' шт.' : 'Нет строки';
-  }
-  transactionsStatus.textContent = date + ' · ПФЦ 399276 · По загруженным строкам WB';
-  $('transactions-totals').hidden = false;
+  const prepared = totals.prepared;
+  $('transactions-prepared').textContent = Number.isFinite(prepared)
+    ? prepared.toLocaleString('ru-RU') + ' шт.' : '—';
+  transactionsStatus.textContent = date + ' · ПФЦ 399276 · ' + (Number.isFinite(prepared)
+    ? 'По загруженным строкам WB' : 'В загруженных строках WB нет подготовки к отгрузке.');
 });
