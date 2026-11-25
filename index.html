@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=090">
-  <script src="app.js?v=090" defer></script>
+  <link rel="stylesheet" href="style.css?v=091">
+  <script src="app.js?v=091" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -29,6 +29,7 @@
         </div>
         <div class="actions">
           <button type="button" id="scan">Обновить МХ и остатки <span aria-hidden="true">↻</span></button>
+          <button type="button" id="scan-all" class="secondary">Проверить все активные МХ</button>
           <button type="button" id="retry-scan" class="secondary" hidden>Повторить проблемные МХ</button>
           <button type="button" id="retry-save" class="secondary" hidden>Повторить запись</button>
         </div>
@@ -44,6 +45,7 @@
       <div class="inventory-header">
         <div><h2>Остатки по МХ</h2><p id="count" role="status"></p></div>
         <div class="filters">
+          <button type="button" id="seller-all" class="secondary">Найти продавцов по активным МХ</button>
           <label>Поиск по товару или МХ
             <input id="search" type="search" placeholder="Артикул WB, баркод, название или МХ">
           </label>
@@ -52,6 +54,8 @@
           </label>
         </div>
       </div>
+      <p id="seller-batch-status" class="seller-batch-status" role="status" hidden></p>
+      <details id="seller-batch-errors" class="seller-batch-status" hidden><summary>Проблемные артикулы</summary><ul></ul></details>
       <div class="table" tabindex="0" role="region" aria-label="Таблица остатков">
         <table><thead><tr><th>МХ</th><th>Результат</th><th>Баркод</th><th>Название</th><th>Количество</th><th>Артикул WB</th><th>Бренд</th><th>Проверено МСК</th></tr></thead><tbody></tbody></table>
       </div>

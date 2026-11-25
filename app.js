@@ -159,7 +159,7 @@ function updateScanZone() {
 scanZone.addEventListener('change', updateScanZone);
 updateScanZone();
 
-function startWarehouse(retry) {
+function startWarehouse(retry, zone = scanZone.value) {
   showScanError('');
   if (document.documentElement.dataset.pfcWarehouse !== 'ready') {
     $('progress').textContent = 'Установите расширение ПФЦ 0.8.5 и обновите страницу.';
@@ -181,22 +181,23 @@ function startWarehouse(retry) {
   localStorage.setItem('pfc-writer-url', writer.value.trim());
   localStorage.setItem('pfc-reader-url', address.value.trim());
   localStorage.setItem('pfc-scan-addresses', scanAddresses.value);
-  const usesCatalog = ['warehouse', 'racks', 'pallets'].includes(scanZone.value) && !retry;
+  const usesCatalog = ['warehouse', 'racks', 'pallets'].includes(zone) && !retry;
   if (usesCatalog && !locationCatalog) {
     showScanError('Сначала загрузите справочник через «Загрузить сохранённые остатки».');
     return;
   }
   const catalog = usesCatalog ? locationCatalog.filter(([mx, active]) => active &&
-    (scanZone.value === 'warehouse' || (scanZone.value === 'pallets') === mx.startsWith('01.01.')))
+    (zone === 'warehouse' || (zone === 'pallets') === mx.startsWith('01.01.')))
     .map(([mx]) => mx) : undefined;
   if (catalog && !catalog.length) {
     showScanError('В выбранной зоне нет активных МХ.');
     return;
   }
   $('progress').textContent = 'Запускаем обход…';
-  sendWarehouse('pfc:scan', {reader: address.value, writer: writer.value, addresses: scanAddresses.value, zone: scanZone.value, catalog, retry});
+  sendWarehouse('pfc:scan', {reader: address.value, writer: writer.value, addresses: scanAddresses.value, zone, catalog, retry});
 }
 $('scan').onclick = () => startWarehouse(false);
+$('scan-all').onclick = () => startWarehouse(false, 'warehouse');
 $('retry-scan').onclick = () => startWarehouse(true);
 $('retry-save').onclick = () => sendWarehouse('pfc:scan-save');
 
@@ -208,6 +209,7 @@ window.addEventListener('pfc:scan-progress', ({detail: job}) => {
   if (!job) return;
   const active = ['scan', 'save'].includes(job.phase);
   $('scan').disabled = active;
+  $('scan-all').disabled = active;
   const indicator = $('run-progress');
   indicator.hidden = !active;
   indicator.max = job.total || 1;
@@ -704,7 +706,7 @@ function openSellerDetails(article) {
   $('seller-title').textContent = 'Продавец · ' + article;
   dialog.showModal();
   if (document.documentElement.dataset.pfcSeller !== 'ready') {
-    $('seller-status').textContent = 'Обновите расширение ПФЦ до 0.9.0 и перезагрузите страницу.';
+    $('seller-status').textContent = 'Обновите расширение ПФЦ до 0.9.1 и перезагрузите страницу.';
     return;
   }
   $('seller-status').textContent = 'Ищем продавца на Wildberries и сохраняем в Google Таблицу…';
@@ -722,4 +724,67 @@ window.addEventListener('pfc:seller-result', event => {
   $('seller-legal').textContent = seller.legalName || 'Не указано на WB';
   $('seller-email').textContent = seller.email || 'Не указана на WB';
   $('seller-fields').hidden = false;
+});
+
+$('seller-all').addEventListener('click', async event => {
+  const button = event.currentTarget;
+  const status = $('seller-batch-status');
+  const errors = $('seller-batch-errors');
+  const list = errors.querySelector('ul');
+  status.hidden = false;
+  errors.hidden = true;
+  list.replaceChildren();
+  if (document.documentElement.dataset.pfcSeller !== 'ready') {
+    status.textContent = 'Обновите расширение ПФЦ до 0.9.1 и перезагрузите страницу.';
+    return;
+  }
+  if (!locationCatalog || !writer.value.trim() || !writer.reportValidity()) {
+    status.textContent = 'Загрузите сохранённые остатки со справочником МХ и проверьте ссылку записи в настройках.';
+    return;
+  }
+  const active = new Set(locationCatalog.filter(([, enabled]) => enabled).map(([mx]) => mx));
+  const articles = [...new Set(rows.filter(row => active.has(row[0]) && row[1] === 'С товаром')
+    .map(row => String(row[5]).trim()).filter(value => /^[1-9]\d{0,15}$/.test(value)))];
+  if (!articles.length) {
+    status.textContent = 'В сохранённых остатках активных МХ нет артикулов WB.';
+    return;
+  }
+  const writerAddress = writer.value.trim();
+  button.disabled = true;
+  let saved = 0;
+  let checked = 0;
+  try {
+    for (const article of articles) {
+      status.textContent = 'Проверяем НМ ' + article + ' · ' + (checked + 1) + ' из ' + articles.length;
+      const requestId = crypto.randomUUID();
+      const result = await new Promise(resolve => {
+        function receive(event) {
+          if (event.detail.requestId !== requestId) return;
+          window.removeEventListener('pfc:seller-result', receive);
+          clearTimeout(timeout);
+          resolve(event.detail);
+        }
+        const timeout = setTimeout(() => {
+          window.removeEventListener('pfc:seller-result', receive);
+          resolve({saveError: 'Расширение не ответило вовремя.'});
+        }, 90000);
+        window.addEventListener('pfc:seller-result', receive);
+        window.dispatchEvent(new CustomEvent('pfc:seller-find', {detail: {article, requestId, writer: writerAddress}}));
+      });
+      checked++;
+      if (result.saved) {
+        saved++;
+        continue;
+      }
+      const li = document.createElement('li');
+      li.textContent = article + ' · ' + (result.saveError || result.error || 'Запись не подтверждена.');
+      list.append(li);
+      errors.hidden = false;
+      if (result.saveError) break;
+    }
+    status.textContent = 'Проверено: ' + checked + ' из ' + articles.length + ' · Записано: ' + saved +
+      ' · Проблемных: ' + (checked - saved) + (checked < articles.length ? ' · Остановлено при ошибке записи.' : '');
+  } finally {
+    button.disabled = false;
+  }
 });
