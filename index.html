@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=103">
-  <script src="app.js?v=103" defer></script>
+  <link rel="stylesheet" href="style.css?v=104">
+  <script src="app.js?v=104" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -108,8 +108,8 @@
       </div>
     </section>
 
-    <section id="dashboard" hidden aria-labelledby="dashboard-title">
-      <h1 id="dashboard-title">Дашборд склада</h1>
+    <section id="dashboard" class="view" hidden aria-labelledby="dashboard-title">
+      <header class="overview"><h1 id="dashboard-title">Дашборд склада</h1></header>
       <div class="dashboard-grid">
         <section class="panel dashboard-panel">
           <h2>Загрузка склада</h2>
@@ -144,100 +144,105 @@
       </section>
       </section>
 
-    <section id="store-summary" class="panel inventory" hidden aria-labelledby="store-summary-title">
-      <div class="inventory-header">
-        <div><h2 id="store-summary-title">Сводка по магазинам</h2>
-          <p id="store-summary-status" role="status">Загрузите сохранённые остатки.</p></div>
-      </div>
-      <div id="store-summary-table" class="table" tabindex="0" role="region" aria-label="Остатки по магазинам" hidden>
+    <section id="store-summary" class="view" hidden aria-labelledby="store-summary-title">
+      <header class="overview">
+        <h1 id="store-summary-title">Сводка по магазинам</h1>
+        <p id="store-summary-status" class="overview-status" role="status">Загрузите сохранённые остатки.</p>
+      </header>
+      <div id="store-summary-table" class="panel table" tabindex="0" role="region" aria-label="Остатки по магазинам" hidden>
         <table><thead><tr><th scope="col">Магазин WB</th><th scope="col">МХ с товаром</th><th scope="col">Уникальных НМ</th><th scope="col">Всего штук</th></tr></thead>
           <tbody id="store-summary-rows"></tbody>
         </table>
       </div>
     </section>
 
-    <section id="warehouse-map" class="panel settings" hidden aria-labelledby="map-title">
-      <h2 id="map-title">Карта склада</h2>
-      <div class="map-tools">
-        <label>Зона <select id="map-zone"><option value="racks">Стеллажи</option><option value="pallets">Паллетные места</option></select></label>
-        <form id="map-find"><label>Найти МХ <input id="map-address" placeholder="02.01.03" required></label><button class="secondary">Найти</button></form>
-      </div>
-      <p id="map-status" role="status">Загрузите остатки, чтобы увидеть занятость.</p>
-      <ul class="map-legend"><li><span class="occupied"></span>С товаром</li><li><span class="empty"></span>Пусто</li><li><span class="unknown"></span>Не проверено</li></ul>
-      <div id="map-grid" class="map-grid"></div>
-      <dialog id="map-details" aria-labelledby="map-cell-title" aria-describedby="map-cell-status">
-        <header class="map-detail-header">
-          <div>
-            <h2 id="map-cell-title"></h2>
-            <p id="map-cell-status"></p>
-            <p id="map-cell-totals" hidden></p>
-          </div>
-          <form method="dialog"><button class="secondary">Закрыть</button></form>
-        </header>
-        <p id="map-cell-empty" hidden></p>
-        <div id="map-products-table" class="table" tabindex="0" role="region" aria-label="Товары в ячейке" hidden>
-          <table>
-            <thead><tr><th scope="col">Название</th><th scope="col">Баркод</th><th scope="col">Артикул WB</th><th scope="col">Магазин WB</th><th scope="col">Количество</th></tr></thead>
-            <tbody id="map-products"></tbody>
-          </table>
+    <section id="warehouse-map" class="view" hidden aria-labelledby="map-title">
+      <header class="overview"><h1 id="map-title">Карта склада</h1></header>
+      <div class="panel settings page-content">
+        <div class="map-tools">
+          <label>Зона <select id="map-zone"><option value="racks">Стеллажи</option><option value="pallets">Паллетные места</option></select></label>
+          <form id="map-find"><label>Найти МХ <input id="map-address" placeholder="02.01.03" required></label><button class="secondary">Найти</button></form>
         </div>
-      </dialog>
+        <p id="map-status" role="status">Загрузите остатки, чтобы увидеть занятость.</p>
+        <ul class="map-legend"><li><span class="occupied"></span>С товаром</li><li><span class="empty"></span>Пусто</li><li><span class="unknown"></span>Не проверено</li></ul>
+        <div id="map-grid" class="map-grid"></div>
+        <dialog id="map-details" aria-labelledby="map-cell-title" aria-describedby="map-cell-status">
+          <header class="map-detail-header">
+            <div>
+              <h2 id="map-cell-title"></h2>
+              <p id="map-cell-status"></p>
+              <p id="map-cell-totals" hidden></p>
+            </div>
+            <form method="dialog"><button class="secondary">Закрыть</button></form>
+          </header>
+          <p id="map-cell-empty" hidden></p>
+          <div id="map-products-table" class="table" tabindex="0" role="region" aria-label="Товары в ячейке" hidden>
+            <table>
+              <thead><tr><th scope="col">Название</th><th scope="col">Баркод</th><th scope="col">Артикул WB</th><th scope="col">Магазин WB</th><th scope="col">Количество</th></tr></thead>
+              <tbody id="map-products"></tbody>
+            </table>
+          </div>
+        </dialog>
+      </div>
     </section>
 
-    <section id="settings" class="panel settings" hidden aria-labelledby="settings-title">
-      <h2 id="settings-title">Подключение</h2>
-      <details id="read-settings">
-        <summary>Чтение Google Таблицы</summary>
-        <form id="connect">
-          <label for="reader">Ссылка /exec приложения чтения</label>
-          <div class="form-row">
-            <input id="reader" type="url" required>
-            <button class="secondary">Загрузить сохранённые остатки</button>
-          </div>
-        </form>
-      </details>
-      <details id="scan-settings">
-        <summary>Настройки проверки МХ</summary>
-        <label for="writer">Ссылка /exec для записи обходов</label>
-        <input id="writer" type="url" placeholder="Прежняя ссылка записи">
-        <label for="scan-zone">Зона обхода</label>
-        <select id="scan-zone"><option value="standard">Прежний обход · 136 МХ</option><option value="warehouse">Все активные МХ</option><option value="racks">Активные стеллажные МХ</option><option value="pallets">Активные паллетные МХ</option><option value="custom">Указать МХ</option></select>
-        <label for="scan-addresses">Список МХ для выборочного обхода</label>
-        <textarea id="scan-addresses" rows="3" placeholder="02.01.01"></textarea>
-        <label class="scan-parallel"><input type="checkbox" id="scan-parallel"> Обход на двух вкладках WB</label>
-      </details>
-      <details>
-        <summary>Справочник МХ</summary>
-        <form id="locations-form">
-          <label>Способ ввода <select id="location-mode"><option value="single">Один МХ</option><option value="rack">Стеллаж</option><option value="pallets">Паллетный диапазон</option></select></label>
-          <label data-location-mode="single">Адрес <input id="location-single" placeholder="11.01.01"></label>
-          <div data-location-mode="rack" class="form-row" hidden>
-            <label>Стеллаж <input id="location-rack" type="number" min="2" max="99" value="11"></label>
-            <label>Полок <input id="location-shelves" type="number" min="1" max="99" value="5"></label>
-            <label>Ячеек на полку <input id="location-cells" type="number" min="1" max="99" value="3"></label>
-          </div>
-          <div data-location-mode="pallets" class="form-row" hidden>
-            <label>От номера <input id="location-first" type="number" min="1" max="999" value="351"></label>
-            <label>До номера <input id="location-last" type="number" min="1" max="999" value="370"></label>
-          </div>
-          <button type="submit" class="secondary">Предпросмотр</button>
-          <button type="button" id="locations-enable" hidden>Сохранить активными</button>
-          <button type="button" id="locations-disable" class="secondary" hidden>Отключить МХ</button>
-          <p id="locations-status" role="status"></p>
-          <p id="locations-preview" class="locations-preview" hidden></p>
-        </form>
-        <label>Найти адрес в справочнике <input id="locations-search" type="search" placeholder="11.01"></label>
-        <p id="locations-count"></p>
-        <ul id="locations-list"></ul>
-      </details>
-      <details>
-        <summary>Вставить остатки</summary>
-        <form id="import-stock">
-          <label for="stock-data">Данные из закрытой страницы Apps Script</label>
-          <textarea id="stock-data" rows="5" required autocomplete="off" spellcheck="false"></textarea>
-          <button class="secondary">Показать остатки</button>
-        </form>
-      </details>
+    <section id="settings" class="view" hidden aria-labelledby="settings-title">
+      <header class="overview"><h1 id="settings-title">Настройки</h1></header>
+      <div class="panel settings page-content">
+        <h2>Подключение</h2>
+        <details id="read-settings">
+          <summary>Чтение Google Таблицы</summary>
+          <form id="connect">
+            <label for="reader">Ссылка /exec приложения чтения</label>
+            <div class="form-row">
+              <input id="reader" type="url" required>
+              <button class="secondary">Загрузить сохранённые остатки</button>
+            </div>
+          </form>
+        </details>
+        <details id="scan-settings">
+          <summary>Настройки проверки МХ</summary>
+          <label for="writer">Ссылка /exec для записи обходов</label>
+          <input id="writer" type="url" placeholder="Прежняя ссылка записи">
+          <label for="scan-zone">Зона обхода</label>
+          <select id="scan-zone"><option value="standard">Прежний обход · 136 МХ</option><option value="warehouse">Все активные МХ</option><option value="racks">Активные стеллажные МХ</option><option value="pallets">Активные паллетные МХ</option><option value="custom">Указать МХ</option></select>
+          <label for="scan-addresses">Список МХ для выборочного обхода</label>
+          <textarea id="scan-addresses" rows="3" placeholder="02.01.01"></textarea>
+          <label class="scan-parallel"><input type="checkbox" id="scan-parallel"> Обход на двух вкладках WB</label>
+        </details>
+        <details>
+          <summary>Справочник МХ</summary>
+          <form id="locations-form">
+            <label>Способ ввода <select id="location-mode"><option value="single">Один МХ</option><option value="rack">Стеллаж</option><option value="pallets">Паллетный диапазон</option></select></label>
+            <label data-location-mode="single">Адрес <input id="location-single" placeholder="11.01.01"></label>
+            <div data-location-mode="rack" class="form-row" hidden>
+              <label>Стеллаж <input id="location-rack" type="number" min="2" max="99" value="11"></label>
+              <label>Полок <input id="location-shelves" type="number" min="1" max="99" value="5"></label>
+              <label>Ячеек на полку <input id="location-cells" type="number" min="1" max="99" value="3"></label>
+            </div>
+            <div data-location-mode="pallets" class="form-row" hidden>
+              <label>От номера <input id="location-first" type="number" min="1" max="999" value="351"></label>
+              <label>До номера <input id="location-last" type="number" min="1" max="999" value="370"></label>
+            </div>
+            <button type="submit" class="secondary">Предпросмотр</button>
+            <button type="button" id="locations-enable" hidden>Сохранить активными</button>
+            <button type="button" id="locations-disable" class="secondary" hidden>Отключить МХ</button>
+            <p id="locations-status" role="status"></p>
+            <p id="locations-preview" class="locations-preview" hidden></p>
+          </form>
+          <label>Найти адрес в справочнике <input id="locations-search" type="search" placeholder="11.01"></label>
+          <p id="locations-count"></p>
+          <ul id="locations-list"></ul>
+        </details>
+        <details>
+          <summary>Вставить остатки</summary>
+          <form id="import-stock">
+            <label for="stock-data">Данные из закрытой страницы Apps Script</label>
+            <textarea id="stock-data" rows="5" required autocomplete="off" spellcheck="false"></textarea>
+            <button class="secondary">Показать остатки</button>
+          </form>
+        </details>
+      </div>
     </section>
   </main>
   <dialog id="seller-details" aria-labelledby="seller-title">
