@@ -133,3 +133,6 @@ summary { cursor: pointer; font-weight: 650; }
 .changes-overview .changes-totals .change-down { color: #ffc6cb; }
 #changes #history-form { border-top: 0; }
 #changes .changes-gap { margin-top: 14px; }
+
+.locations-preview { max-height: 9rem; overflow: auto; overflow-wrap: anywhere; margin-top: 8px; }
+#locations-form button { margin: 8px 6px 0 0; }

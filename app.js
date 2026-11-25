@@ -122,7 +122,7 @@ function showScanError(message) {
   error.hidden = !message;
 }
 const scanZone = $('scan-zone');
-scanZone.value = localStorage.getItem('pfc-scan-zone') || (scanAddresses.value.trim() ? 'custom' : 'standard');
+scanZone.value = localStorage.getItem('pfc-scan-zone') || (scanAddresses.value.trim() ? 'custom' : 'warehouse');
 function updateScanZone() {
   scanAddresses.disabled = scanZone.value !== 'custom';
   localStorage.setItem('pfc-scan-zone', scanZone.value);
@@ -133,7 +133,7 @@ updateScanZone();
 function startWarehouse(retry) {
   showScanError('');
   if (document.documentElement.dataset.pfcWarehouse !== 'ready') {
-    $('progress').textContent = 'Установите расширение ПФЦ 0.8.2 и обновите страницу.';
+    $('progress').textContent = 'Установите расширение ПФЦ 0.8.5 и обновите страницу.';
     return;
   }
   if (!address.validity.valid) {
@@ -152,8 +152,20 @@ function startWarehouse(retry) {
   localStorage.setItem('pfc-writer-url', writer.value.trim());
   localStorage.setItem('pfc-reader-url', address.value.trim());
   localStorage.setItem('pfc-scan-addresses', scanAddresses.value);
+  const usesCatalog = ['warehouse', 'racks', 'pallets'].includes(scanZone.value) && !retry;
+  if (usesCatalog && !locationCatalog) {
+    showScanError('Сначала загрузите справочник через «Загрузить сохранённые остатки».');
+    return;
+  }
+  const catalog = usesCatalog ? locationCatalog.filter(([mx, active]) => active &&
+    (scanZone.value === 'warehouse' || (scanZone.value === 'pallets') === mx.startsWith('01.01.')))
+    .map(([mx]) => mx) : undefined;
+  if (catalog && !catalog.length) {
+    showScanError('В выбранной зоне нет активных МХ.');
+    return;
+  }
   $('progress').textContent = 'Запускаем обход…';
-  sendWarehouse('pfc:scan', {reader: address.value, writer: writer.value, addresses: scanAddresses.value, zone: scanZone.value, retry});
+  sendWarehouse('pfc:scan', {reader: address.value, writer: writer.value, addresses: scanAddresses.value, zone: scanZone.value, catalog, retry});
 }
 $('scan').onclick = () => startWarehouse(false);
 $('retry-scan').onclick = () => startWarehouse(true);
@@ -249,7 +261,7 @@ function renderChanges(report) {
   $('changes-table').hidden = true;
   if (!report || report.unavailable || report.error) {
     status.textContent = report?.error || (report?.unavailable
-      ? 'В журнале пока нет одного обхода, где подтверждены все 136 МХ.'
+      ? 'В журнале пока нет полного обхода с подтверждёнными результатами.'
       : 'Для сравнения обновите расширение и приложение чтения.');
     return;
   }
@@ -331,11 +343,11 @@ const historyTo = $('history-to');
 function compareSavedScans(before, after) {
   const previous = new Map(before.cells);
   const latest = new Map(after.cells);
-  const expected = before.palletRun && after.palletRun
+  const scopeFor = (scan, checked) => scan.scope ?? (scan.palletRun
     ? Array.from({length: 350}, (_, i) => '01.01.' + String(i + 1).padStart(2, '0'))
-    : [...new Set([...previous.keys(), ...latest.keys()])];
-  const missing = expected
-    .filter(mx => !previous.has(mx) || !latest.has(mx)).sort();
+    : checked.keys());
+  const expected = [...new Set([...scopeFor(before, previous), ...scopeFor(after, latest)])];
+  const missing = expected.filter(mx => !previous.has(mx) || !latest.has(mx)).sort();
   const products = new Map();
   let checked = 0;
   for (const [mx, current] of latest) {
@@ -390,7 +402,7 @@ window.addEventListener('pfc:changes', ({detail: report}) => {
     select.replaceChildren(...scanHistory.map(item => {
       const option = document.createElement('option');
       option.value = item.id;
-      option.textContent = item.stamp + (item.palletRun ? ' · Паллеты: ' + item.cells.length + '/350' : ' · МХ: ' + item.cells.length);
+      option.textContent = item.stamp + (item.scope ? ' · МХ: ' + item.cells.length + '/' + item.scope.length : item.palletRun ? ' · Паллеты: ' + item.cells.length + '/350' : ' · МХ: ' + item.cells.length);
       return option;
     }));
     select.value = scanHistory.some(item => item.id === selected)
@@ -399,12 +411,28 @@ window.addEventListener('pfc:changes', ({detail: report}) => {
   renderHistory();
 });
 
+let locationCatalog = null;
 const mapZone = $('map-zone');
 let mapLoaded = false;
 let mapCells = new Map();
 const addressPart = number => String(number).padStart(2, '0');
 
 function warehouseGroups() {
+  if (locationCatalog) {
+    const groups = new Map();
+    const pallets = mapZone.value === 'pallets';
+    for (const [mx, active] of locationCatalog) {
+      if (!active || pallets !== mx.startsWith('01.01.')) continue;
+      const [rack, shelf, cell] = mx.split('.');
+      const group = pallets ? Math.floor((Number(cell) - 1) / 25) : Number(rack);
+      if (!groups.has(group)) groups.set(group, []);
+      groups.get(group).push([mx, pallets ? cell : shelf + '.' + cell]);
+    }
+    return [...groups].sort(([a], [b]) => a - b).map(([group, locations]) => ({
+      title: pallets ? 'Места ' + (group * 25 + 1) + '–' + (group * 25 + 25) : 'Стеллаж ' + addressPart(group),
+      locations: locations.sort(([a], [b]) => a.localeCompare(b, 'ru', {numeric: true}))
+    }));
+  }
   if (mapZone.value === 'pallets') {
     return Array.from({length: 14}, (_, group) => {
       const start = group * 25 + 1;
@@ -523,3 +551,103 @@ window.addEventListener('hashchange', () => {
   window.scrollTo(0, 0);
 });
 showView();
+
+function locationAddresses(mode, fields) {
+  const numeric = (value, min, max) => /^\d+$/.test(value) && Number(value) >= min && Number(value) <= max;
+  if (mode === 'single') {
+    const match = fields.single.trim().match(/^(\d{2})\.(\d{2})\.(\d{2,3})$/);
+    if (!match || !numeric(match[1], 1, 99) || !numeric(match[2], 1, 99) || !numeric(match[3], 1, 999) ||
+        (match[1] === '01' && match[2] !== '01')) throw new Error('Введите МХ вида 11.01.01 или 01.01.351.');
+    return [match[1] + '.' + match[2] + '.' + addressPart(Number(match[3]))];
+  }
+  if (mode === 'pallets') {
+    if (!numeric(fields.first, 1, 999) || !numeric(fields.last, Number(fields.first), 999)) {
+      throw new Error('Укажите диапазон паллет от 1 до 999.');
+    }
+    return Array.from({length: Number(fields.last) - Number(fields.first) + 1}, (_, i) =>
+      '01.01.' + addressPart(Number(fields.first) + i));
+  }
+  if (!numeric(fields.rack, 2, 99) || !numeric(fields.shelves, 1, 99) || !numeric(fields.cells, 1, 99) ||
+      Number(fields.shelves) * Number(fields.cells) > 999) throw new Error('Проверьте номер стеллажа и размеры. Максимум 999 МХ за раз.');
+  return Array.from({length: Number(fields.shelves) * Number(fields.cells)}, (_, i) =>
+    [Number(fields.rack), Math.floor(i / Number(fields.cells)) + 1, i % Number(fields.cells) + 1].map(addressPart).join('.'));
+}
+
+let locationPreview = [];
+function clearLocationPreview() {
+  locationPreview = [];
+  for (const id of ['locations-preview', 'locations-enable', 'locations-disable']) $(id).hidden = true;
+}
+function renderLocationCatalog() {
+  if (!locationCatalog) return;
+  const query = $('locations-search').value.trim();
+  const found = locationCatalog.filter(([mx]) => mx.includes(query));
+  $('locations-count').textContent = 'Активных: ' + locationCatalog.filter(([, active]) => active).length +
+    ' · Всего: ' + locationCatalog.length + ' · В списке: ' + Math.min(30, found.length) + ' из ' + found.length;
+  $('locations-list').replaceChildren(...found.slice(0, 30).map(([mx, active]) => {
+    const row = document.createElement('li');
+    row.textContent = mx + ' · ' + (active ? 'Активен' : 'Отключён');
+    return row;
+  }));
+}
+function acceptLocationCatalog(data) {
+  if (!Array.isArray(data)) return;
+  locationCatalog = data;
+  renderLocationCatalog();
+  renderWarehouseMap();
+}
+window.addEventListener('pfc:locations', ({detail}) => {
+  if (detail.error) {
+    locationCatalog = null;
+    $('locations-status').textContent = detail.error;
+  } else acceptLocationCatalog(detail.rows);
+});
+$('locations-search').addEventListener('input', renderLocationCatalog);
+$('location-mode').addEventListener('change', () => {
+  for (const element of document.querySelectorAll('[data-location-mode]')) {
+    element.hidden = element.dataset.locationMode !== $('location-mode').value;
+  }
+});
+$('locations-form').addEventListener('input', clearLocationPreview);
+$('locations-form').onsubmit = event => {
+  event.preventDefault();
+  try {
+    const fields = Object.fromEntries(['single','rack','shelves','cells','first','last']
+      .map(key => [key, $('location-' + key).value]));
+    locationPreview = locationAddresses($('location-mode').value, fields);
+    $('locations-status').textContent = 'Адресов в списке: ' + locationPreview.length;
+    $('locations-preview').textContent = locationPreview.join(', ');
+    for (const id of ['locations-preview', 'locations-enable', 'locations-disable']) $(id).hidden = false;
+  } catch (error) {
+    clearLocationPreview();
+    $('locations-status').textContent = error.message;
+  }
+};
+for (const [id, active] of [['locations-enable', true], ['locations-disable', false]]) {
+  $(id).onclick = () => {
+    if (document.documentElement.dataset.pfcLocations !== 'ready') {
+      $('locations-status').textContent = 'Обновите расширение ПФЦ до 0.8.5.';
+      return;
+    }
+    if (!writer.value.trim() || !writer.validity.valid) {
+      $('scan-settings').open = true;
+      writer.focus();
+      $('locations-status').textContent = 'Укажите ссылку /exec для записи.';
+      return;
+    }
+    if (!locationPreview.length) return;
+    for (const key of ['locations-enable', 'locations-disable']) $(key).disabled = true;
+    $('locations-status').textContent = 'Сохраняем справочник…';
+    window.dispatchEvent(new CustomEvent('pfc:locations-save', {
+      detail: {writer: writer.value.trim(), request: {addresses: locationPreview, active}}
+    }));
+  };
+}
+window.addEventListener('pfc:locations-saved', ({detail}) => {
+  for (const id of ['locations-enable', 'locations-disable']) $(id).disabled = false;
+  if (!detail.error) {
+    acceptLocationCatalog(detail.rows);
+    clearLocationPreview();
+  }
+  $('locations-status').textContent = detail.error || 'Справочник сохранён.';
+});
