@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=105">
-  <script src="app.js?v=105" defer></script>
+  <link rel="stylesheet" href="style.css?v=106">
+  <script src="app.js?v=106" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -129,13 +129,14 @@
       <section class="panel dashboard-panel dashboard-trend">
         <div class="dashboard-heading">
           <h2>Динамика остатков</h2>
+          <label>Период <select id="trend-period"><option value="7">7 дней</option><option value="30">30 дней</option></select></label>
           <label>Показатель <select id="trend-metric"><option value="units">Штуки</option><option value="occupied">Занятые МХ</option></select></label>
         </div>
         <p id="trend-status">Загрузите историю обходов.</p>
         <div id="trend-chart" hidden>
           <p class="trend-scale"></p>
           <div class="trend-plot" role="group" aria-label="Точки графика по обходам"></div>
-          <div class="trend-axis"><span class="trend-start"></span><span class="trend-end"></span></div>
+          <div class="trend-axis"></div>
           <p id="trend-point-value" role="status"></p>
         </div>
         <div id="trend-comparison" hidden>

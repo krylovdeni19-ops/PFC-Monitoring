@@ -278,3 +278,8 @@ summary { cursor: pointer; font-weight: 650; }
 .trend-axis { display: flex; justify-content: space-between; gap: 12px; padding-top: 6px; }
 .trend-end { text-align: right; }
 #trend-point-value { margin-top: 8px; font-weight: 650; }
+
+.trend-axis { position: relative; display: block; height: 26px; padding: 0; }
+.trend-axis span { position: absolute; top: 6px; transform: translateX(-50%); }
+.trend-missing { width: 12px; height: 18px; }
+.trend-missing::after { width: 4px; height: 4px; border: none; background: var(--muted); }

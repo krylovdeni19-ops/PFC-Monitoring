@@ -678,27 +678,45 @@ function trendPair() {
   return before > after && after >= 0 ? [scanHistory[before], scanHistory[after]] : null;
 }
 
-function drawTrend(chart, scans, values, format) {
-  const times = scans.map(scan => {
-    const match = scan.stamp.match(/^(\d{2})\.(\d{2})\.(\d{4}) (\d{2}):(\d{2}):(\d{2})/);
-    if (!match) return NaN;
-    const [, day, month, year, hour, minute, second] = match.map(Number);
-    return Date.UTC(year, month - 1, day, hour, minute, second);
-  });
-  const timeSpan = times.at(-1) - times[0];
-  const timed = times.every(Number.isFinite) && timeSpan > 0;
-  const padding = Math.max(1, Math.ceil((Math.max(...values) - Math.min(...values)) / 5));
-  const low = Math.max(0, Math.min(...values) - padding);
-  const high = Math.max(...values) + padding;
-  const points = values.map((value, index) => ({
-    x: 10 + 86 * (values.length === 1 ? 0.5 : timed ? (times[index] - times[0]) / timeSpan : index / (values.length - 1)),
-    y: 12 + 72 * (high - value) / (high - low)
-  }));
+function scanDay(scan) {
+  const match = scan.stamp.match(/^(\d{2})\.(\d{2})\.(\d{4}) /);
+  if (!match) return NaN;
+  const [, day, month, year] = match.map(Number);
+  return Date.UTC(year, month - 1, day) / 86400000;
+}
+
+function dailyTrendScans(scans) {
+  const days = new Map();
+  for (const scan of scans) {
+    const day = scanDay(scan);
+    if (Number.isFinite(day)) days.set(day, scan);
+  }
+  return days;
+}
+
+function drawTrend(chart, days, values, format, lastDay, period) {
+  const firstDay = lastDay - period + 1;
+  const date = day => new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit', month: '2-digit', timeZone: 'UTC'
+  }).format(day * 86400000);
+  const minimum = values.size ? Math.min(...values.values()) : 0;
+  const padding = Math.max(1, Math.ceil((Math.max(0, ...values.values()) - minimum) / 5));
+  const low = Math.max(0, minimum - padding);
+  const high = Math.max(0, ...values.values()) + padding;
   const plot = chart.querySelector('.trend-plot');
   plot.replaceChildren();
-  for (const [index, point] of points.entries()) {
-    const previous = points[index - 1];
-    if (previous) {
+  let previous;
+  const prior = [...days].filter(([day]) => day < firstDay).at(-1);
+  let lastValue = prior ? stockSnapshotTotals(prior[1].cells)[$('trend-metric').value] : undefined;
+  let label;
+  for (let day = firstDay; day <= lastDay; day++) {
+    const value = values.get(day);
+    const scan = days.get(day);
+    const point = {
+      x: 4 + 92 * (day - firstDay) / (period - 1),
+      y: scan ? 12 + 72 * (high - value) / (high - low) : 94
+    };
+    if (previous && scan) {
       const line = document.createElement('span');
       line.className = 'trend-segment';
       line.style.clipPath = 'polygon(' + previous.x + '% ' + (previous.y - 0.5) + '%, ' +
@@ -707,33 +725,54 @@ function drawTrend(chart, scans, values, format) {
         previous.x + '% ' + (previous.y + 0.5) + '%)';
       plot.append(line);
     }
-    const label = scans[index].stamp + ' МСК · ' + format.format(values[index]);
-    const dot = dashboardButton('', () => { $('trend-point-value').textContent = label; });
-    dot.className = 'trend-point';
+    const delta = lastValue === undefined || !scan ? '' :
+      ' · К предыдущему обходу: ' + new Intl.NumberFormat('ru-RU', {signDisplay: 'exceptZero'}).format(value - lastValue);
+    const detail = scan ? scan.stamp + ' МСК · ' + format.format(value) + delta : date(day) + ' · Нет полного обхода';
+    const dot = dashboardButton('', () => { $('trend-point-value').textContent = detail; });
+    dot.className = scan ? 'trend-point' : 'trend-point trend-missing';
     dot.style.left = point.x + '%';
     dot.style.top = point.y + '%';
-    dot.title = label;
-    dot.setAttribute('aria-label', label);
-    dot.addEventListener('focus', () => { $('trend-point-value').textContent = label; });
+    dot.title = detail;
+    dot.setAttribute('aria-label', detail);
+    dot.addEventListener('focus', () => { $('trend-point-value').textContent = detail; });
     plot.append(dot);
+    previous = scan ? point : undefined;
+    if (scan) {
+      lastValue = value;
+      label = detail;
+    }
   }
   chart.querySelector('.trend-scale').textContent = 'Шкала: ' + format.format(low) + '–' + format.format(high);
-  chart.querySelector('.trend-start').textContent = scans[0].stamp;
-  chart.querySelector('.trend-end').textContent = scans.length > 1 ? scans.at(-1).stamp : '';
-  $('trend-point-value').textContent = scans.at(-1).stamp + ' МСК · ' + format.format(values.at(-1));
+  const axis = chart.querySelector('.trend-axis');
+  axis.replaceChildren(...[0, ...(period === 7 ? [1, 2, 3, 4, 5] : [7, 14, 21]), period - 1].map(offset => {
+    const tick = document.createElement('span');
+    tick.textContent = date(firstDay + offset);
+    tick.style.left = (4 + 92 * offset / (period - 1)) + '%';
+    return tick;
+  }));
+  $('trend-point-value').textContent = label || 'В выбранном периоде нет полного обхода.';
+
 }
 
 function renderTrend() {
   const metric = $('trend-metric').value;
   const format = new Intl.NumberFormat('ru-RU');
-  const scans = fullTrendScans(scanHistory, locationCatalog);
-  const values = scans.map(scan => stockSnapshotTotals(scan.cells)[metric]);
-  $('trend-status').textContent = scans.length
-    ? 'Полные обходы по текущему справочнику МХ · время МСК'
-    : 'Нет сохранённых полных обходов по текущему справочнику МХ.';
+  const days = dailyTrendScans(fullTrendScans(scanHistory, locationCatalog));
+  const period = Number($('trend-period').value);
+  const lastDay = Math.max(...scanHistory.map(scanDay).filter(Number.isFinite));
+  const values = new Map([...days].filter(([day]) => day > lastDay - period && day <= lastDay)
+    .map(([day, scan]) => [day, stockSnapshotTotals(scan.cells)[metric]]));
+  $('trend-status').textContent = scanHistory.length
+    ? 'Последний полный обход каждого дня · время МСК'
+    : 'Загрузите историю обходов.';
   const chart = $('trend-chart');
-  chart.hidden = !scans.length;
-  if (scans.length) drawTrend(chart, scans, values, format);
+  chart.hidden = !Number.isFinite(lastDay);
+  if (!chart.hidden) drawTrend(chart, days, values, format, lastDay, period);
+  if (days.size >= 2 && !$('trend-from').dataset.manual) {
+    const [before, after] = [...days.values()].slice(-2);
+    $('trend-from').value = before.id;
+    $('trend-to').value = after.id;
+  }
   const pair = trendPair();
   $('trend-open').disabled = !pair;
   const result = $('trend-result');
@@ -757,7 +796,12 @@ function renderTrend() {
   result.textContent = coverage + ' · Было: ' + format.format(was) + ' · Стало: ' + format.format(now) + ' · Разница: ' + delta;
 }
 
-for (const id of ['trend-metric', 'trend-from', 'trend-to']) $(id).addEventListener('change', renderTrend);
+for (const id of ['trend-period', 'trend-metric', 'trend-from', 'trend-to']) {
+  $(id).addEventListener('change', () => {
+    if (id === 'trend-from' || id === 'trend-to') $('trend-from').dataset.manual = 'true';
+    renderTrend();
+  });
+}
 $('trend-open').addEventListener('click', () => {
   const pair = trendPair();
   if (!pair) return;
