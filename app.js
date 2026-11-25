@@ -241,6 +241,7 @@ const scanZone = $('scan-zone');
 scanZone.value = localStorage.getItem('pfc-scan-zone') || (scanAddresses.value.trim() ? 'custom' : 'warehouse');
 function updateScanZone() {
   scanAddresses.disabled = scanZone.value !== 'custom';
+  $('scan-parallel').disabled = scanAddresses.disabled;
   localStorage.setItem('pfc-scan-zone', scanZone.value);
 }
 scanZone.addEventListener('change', updateScanZone);
@@ -282,7 +283,7 @@ function startWarehouse(retry) {
     return;
   }
   $('progress').textContent = 'Запускаем обход…';
-  sendWarehouse('pfc:scan', {reader: address.value, writer: writer.value, addresses: scanAddresses.value, zone, catalog, retry});
+  sendWarehouse('pfc:scan', {reader: address.value, writer: writer.value, addresses: scanAddresses.value, zone, catalog, retry, parallel: zone === 'custom' && $('scan-parallel').checked});
 }
 $('scan').onclick = () => startWarehouse(false);
 $('retry-scan').onclick = () => startWarehouse(true);

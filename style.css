@@ -202,3 +202,6 @@ summary { cursor: pointer; font-weight: 650; }
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+.settings .scan-parallel { display: flex; align-items: center; gap: 8px; }
+.settings .scan-parallel input { width: auto; min-height: auto; }
