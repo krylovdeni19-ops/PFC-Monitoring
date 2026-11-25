@@ -136,3 +136,17 @@ summary { cursor: pointer; font-weight: 650; }
 
 .locations-preview { max-height: 9rem; overflow: auto; overflow-wrap: anywhere; margin-top: 8px; }
 #locations-form button { margin: 8px 6px 0 0; }
+
+.stock-map-link, .stock-article-link {
+  color: #205b8c;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.stock-map-link {
+  background: none;
+  border: 0;
+  min-height: 0;
+  padding: 0;
+}

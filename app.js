@@ -19,14 +19,37 @@ $('connect').onsubmit = event => {
 function renderStock() {
   const term = search.value.trim().toLocaleLowerCase('ru');
   const found = rows.filter(row => (!stockFilter.value || row[1] === stockFilter.value) &&
-    [0, 2, 3].some(index => String(row[index]).toLocaleLowerCase('ru').includes(term)));
+    ([0, 2, 3].some(index => String(row[index]).toLocaleLowerCase('ru').includes(term)) ||
+      String(row[5]).trim() === term));;
   const count = found.reduce((total, row) => total + (Number(row[4]) || 0), 0);
-  $('count').textContent = 'Строк: ' + found.length + ' · Всего: ' + count + ' шт.';
+  const locations = new Set(found.map(row => row[0])).size;
+  $('count').textContent = 'МХ: ' + locations + ' · Строк: ' + found.length + ' · Всего: ' + count + ' шт.';
   const body = document.createDocumentFragment();
   for (const row of found) {
     const tr = document.createElement('tr');
     row.forEach((field, index) => {
       const cell = tr.insertCell();
+      if (index === 0 && /^\d{2}\.\d{2}\.\d{2,3}$/.test(field)) {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'stock-map-link';
+        button.textContent = field;
+        button.setAttribute('aria-label', 'Открыть МХ ' + field + ' на карте склада');
+        button.addEventListener('click', () => showStockLocation(field));
+        cell.append(button);
+        return;
+      }
+      const article = String(field).trim();
+      if (index === 5 && /^[1-9]\d*$/.test(article)) {
+        const link = document.createElement('a');
+        link.className = 'stock-article-link';
+        link.href = 'https://www.wildberries.ru/catalog/' + article + '/detail.aspx';
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = article;
+        cell.append(link);
+        return;
+      }
       if (index !== 1) {
         cell.textContent = field;
         return;
@@ -518,13 +541,28 @@ $('map-grid').addEventListener('click', event => {
   const cell = event.target.closest('button[data-address]');
   if (cell) openMapCell(cell.dataset.address);
 });
-$('map-find').addEventListener('submit', event => {
-  event.preventDefault();
-  const address = $('map-address').value.trim();
-  const input = $('map-address');
+function findMapButton(address) {
   mapZone.value = address.startsWith('01.01.') ? 'pallets' : 'racks';
   renderWarehouseMap();
-  const cell = [...$('map-grid').querySelectorAll('button')].find(button => button.dataset.address === address);
+  return [...$('map-grid').querySelectorAll('button')].find(button => button.dataset.address === address);
+}
+
+function showStockLocation(address) {
+  if (location.hash !== '#warehouse-map') history.pushState(null, '', '#warehouse-map');
+  showView();
+  window.scrollTo(0, 0);
+  const input = $('map-address');
+  input.value = address;
+  input.setCustomValidity('');
+  (findMapButton(address) || input).focus();
+  openMapCell(address);
+}
+
+$('map-find').addEventListener('submit', event => {
+  event.preventDefault();
+  const input = $('map-address');
+  const address = input.value.trim();
+  const cell = findMapButton(address);
   if (!cell) {
     input.setCustomValidity('Введите адрес из карты склада, например 02.01.03.');
     input.reportValidity();
