@@ -121,10 +121,19 @@ function showScanError(message) {
   error.textContent = message;
   error.hidden = !message;
 }
+const scanZone = $('scan-zone');
+scanZone.value = localStorage.getItem('pfc-scan-zone') || (scanAddresses.value.trim() ? 'custom' : 'standard');
+function updateScanZone() {
+  scanAddresses.disabled = scanZone.value !== 'custom';
+  localStorage.setItem('pfc-scan-zone', scanZone.value);
+}
+scanZone.addEventListener('change', updateScanZone);
+updateScanZone();
+
 function startWarehouse(retry) {
   showScanError('');
   if (document.documentElement.dataset.pfcWarehouse !== 'ready') {
-    $('progress').textContent = 'Установите расширение ПФЦ 0.7.1 и обновите страницу.';
+    $('progress').textContent = 'Установите расширение ПФЦ 0.7.9 и обновите страницу.';
     return;
   }
   if (!address.validity.valid) {
@@ -144,7 +153,7 @@ function startWarehouse(retry) {
   localStorage.setItem('pfc-reader-url', address.value.trim());
   localStorage.setItem('pfc-scan-addresses', scanAddresses.value);
   $('progress').textContent = 'Запускаем обход…';
-  sendWarehouse('pfc:scan', {reader: address.value, writer: writer.value, addresses: scanAddresses.value, retry});
+  sendWarehouse('pfc:scan', {reader: address.value, writer: writer.value, addresses: scanAddresses.value, zone: scanZone.value, retry});
 }
 $('scan').onclick = () => startWarehouse(false);
 $('retry-scan').onclick = () => startWarehouse(true);
@@ -163,7 +172,8 @@ window.addEventListener('pfc:scan-progress', ({detail: job}) => {
   indicator.max = job.total || 1;
   indicator.value = job.checked;
   $('retry-scan').hidden = job.phase !== 'done' || !job.failed.length;
-  $('retry-save').hidden = !['error', 'interrupted'].includes(job.phase) || !job.savedCells;
+  $('retry-save').hidden = !['error', 'interrupted'].includes(job.phase) || (!job.savedCells && !job.resumable);
+  $('retry-save').textContent = job.resumable ? 'Продолжить обход' : 'Повторить запись';
   const tally = 'Проверено: ' + job.checked + ' из ' + job.total +
     ' · Успешно: ' + job.savedCells + ' · Проблемных: ' + job.failed.length;
   const label = {

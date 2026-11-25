@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=078">
-  <script src="app.js?v=078" defer></script>
+  <link rel="stylesheet" href="style.css?v=079">
+  <script src="app.js?v=079" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -115,7 +115,9 @@
         <summary>Настройки проверки МХ</summary>
         <label for="writer">Ссылка /exec для записи обходов</label>
         <input id="writer" type="url" placeholder="Прежняя ссылка записи">
-        <label for="scan-addresses">Список МХ (оставьте пустым для всех 136)</label>
+        <label for="scan-zone">Зона обхода</label>
+        <select id="scan-zone"><option value="standard">Прежний обход · 136 МХ</option><option value="racks">Стеллажи 02–10 · 135 МХ</option><option value="pallets">Паллеты · 350 МХ</option><option value="custom">Указать МХ</option></select>
+        <label for="scan-addresses">Список МХ для выборочного обхода</label>
         <textarea id="scan-addresses" rows="3" placeholder="02.01.01"></textarea>
       </details>
       <details>
