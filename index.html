@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=096">
-  <script src="app.js?v=096" defer></script>
+  <link rel="stylesheet" href="style.css?v=097">
+  <script src="app.js?v=097" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -13,6 +13,7 @@
       <a class="brand" href="./"><span class="brand-mark" aria-hidden="true">П</span> ПФЦ Мониторинг</a>
       <nav class="view-nav" aria-label="Разделы склада">
         <a href="#stock-view" aria-current="page">Остатки</a>
+        <a href="#store-summary">Сводка по магазинам</a>
         <a href="#warehouse-map">Карта склада</a>
         <a href="#changes">Изменения</a>
         <a href="#settings">Настройки</a>
@@ -103,6 +104,18 @@
         <div id="changes-table" class="table" tabindex="0" role="region" aria-label="Изменения по баркодам" hidden>
           <table><thead><tr><th>Баркод</th><th>Название</th><th>Было</th><th>Стало</th><th>Разница</th><th>Изменения по МХ</th></tr></thead><tbody id="changes-rows"></tbody></table>
         </div>
+      </div>
+    </section>
+
+    <section id="store-summary" class="panel inventory" hidden aria-labelledby="store-summary-title">
+      <div class="inventory-header">
+        <div><h2 id="store-summary-title">Сводка по магазинам</h2>
+          <p id="store-summary-status" role="status">Загрузите сохранённые остатки.</p></div>
+      </div>
+      <div id="store-summary-table" class="table" tabindex="0" role="region" aria-label="Остатки по магазинам" hidden>
+        <table><thead><tr><th scope="col">Магазин WB</th><th scope="col">МХ с товаром</th><th scope="col">Уникальных НМ</th><th scope="col">Всего штук</th></tr></thead>
+          <tbody id="store-summary-rows"></tbody>
+        </table>
       </div>
     </section>
 

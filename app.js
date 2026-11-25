@@ -21,13 +21,75 @@ function storeName(row) {
   return row[1] === 'С товаром' ? String(row[6]).trim() : '';
 }
 
+const unknownStore = 'unknown';
+const unknownStoreLabel = 'Магазин не определён';
+
+function storeKey(row) {
+  const name = storeName(row);
+  return name ? 'store:' + name : unknownStore;
+}
+
 function updateStoreFilter() {
   const previous = storeFilter.value;
   const stores = [...new Set(rows.map(storeName).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, 'ru', {numeric: true}));
   storeFilter.replaceChildren(new Option('Все магазины', ''),
-    ...stores.map(name => new Option(name, name)));
-  storeFilter.value = stores.includes(previous) ? previous : '';
+    ...stores.map(name => new Option(name, 'store:' + name)));
+  if (rows.some(row => row[1] === 'С товаром' && !storeName(row))) {
+    storeFilter.add(new Option(unknownStoreLabel, unknownStore));
+  }
+  storeFilter.value = [...storeFilter.options].some(option => option.value === previous) ? previous : '';
+}
+
+function summarizeStores(stock) {
+  const groups = new Map();
+  for (const row of stock) {
+    if (row[1] !== 'С товаром') continue;
+    const key = storeKey(row);
+    if (!groups.has(key)) {
+      groups.set(key, {key, name: storeName(row) || unknownStoreLabel, locations: new Set(), articles: new Set(), units: 0});
+    }
+    const group = groups.get(key);
+    group.locations.add(row[0]);
+    const article = String(row[5]).trim();
+    if (/^[1-9]\d*$/.test(article)) group.articles.add(article);
+    group.units += Number(row[4]) || 0;
+  }
+  return [...groups.values()].sort((a, b) => b.units - a.units || a.name.localeCompare(b.name, 'ru'));
+}
+
+function renderStoreSummary() {
+  const groups = summarizeStores(rows);
+  const format = new Intl.NumberFormat('ru-RU');
+  $('store-summary-status').textContent = groups.length
+    ? 'Магазинов: ' + format.format(groups.filter(group => group.key !== unknownStore).length) +
+      ' · Один МХ может учитываться у нескольких магазинов.'
+    : 'В загруженных остатках нет товаров.';
+  $('store-summary-table').hidden = !groups.length;
+  const body = document.createDocumentFragment();
+  for (const group of groups) {
+    const tr = document.createElement('tr');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'stock-map-link';
+    button.textContent = group.name;
+    button.addEventListener('click', () => {
+      search.value = '';
+      stockFilter.value = '';
+      storeFilter.value = group.key;
+      renderStock();
+      if (location.hash !== '#stock-view') history.pushState(null, '', '#stock-view');
+      showView();
+      $('stock').scrollIntoView();
+      storeFilter.focus({preventScroll: true});
+    });
+    tr.insertCell().append(button);
+    for (const count of [group.locations.size, group.articles.size, group.units]) {
+      tr.insertCell().textContent = format.format(count);
+    }
+    body.append(tr);
+  }
+  $('store-summary-rows').replaceChildren(body);
 }
 
 function stockArticleLink(field) {
@@ -45,7 +107,7 @@ function stockArticleLink(field) {
 function renderStock() {
   const term = search.value.trim().toLocaleLowerCase('ru');
   const found = rows.filter(row => (!stockFilter.value || row[1] === stockFilter.value) &&
-    (!storeFilter.value || storeName(row) === storeFilter.value) &&
+    (!storeFilter.value || (row[1] === 'С товаром' && storeKey(row) === storeFilter.value)) &&
     ([0, 2, 3].some(index => String(row[index]).toLocaleLowerCase('ru').includes(term)) ||
       String(row[5]).trim() === term));
   const count = found.reduce((total, row) => total + (Number(row[4]) || 0), 0);
@@ -102,6 +164,7 @@ function acceptStock(data) {
   }
   rows = data;
   updateStoreFilter();
+  renderStoreSummary();
   $('stock').hidden = false;
   $('summary').hidden = false;
   status.textContent = 'МХ в отчёте: ' + new Set(rows.map(row => row[0])).size;
