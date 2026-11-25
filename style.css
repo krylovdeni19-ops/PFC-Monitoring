@@ -175,4 +175,4 @@ summary { cursor: pointer; font-weight: 650; }
 #seller-fields dt { font-weight: 700; }
 #seller-fields dd { margin: 4px 0 14px; overflow-wrap: anywhere; }
 
-.seller-batch-status { margin: 0; padding: 8px 18px; }
+.seller-batch-status { margin: 12px 0 0; }

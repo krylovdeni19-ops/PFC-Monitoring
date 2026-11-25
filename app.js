@@ -159,7 +159,8 @@ function updateScanZone() {
 scanZone.addEventListener('change', updateScanZone);
 updateScanZone();
 
-function startWarehouse(retry, zone = scanZone.value) {
+function startWarehouse(retry) {
+  const zone = scanZone.value;
   showScanError('');
   if (document.documentElement.dataset.pfcWarehouse !== 'ready') {
     $('progress').textContent = 'Установите расширение ПФЦ 0.8.5 и обновите страницу.';
@@ -197,7 +198,6 @@ function startWarehouse(retry, zone = scanZone.value) {
   sendWarehouse('pfc:scan', {reader: address.value, writer: writer.value, addresses: scanAddresses.value, zone, catalog, retry});
 }
 $('scan').onclick = () => startWarehouse(false);
-$('scan-all').onclick = () => startWarehouse(false, 'warehouse');
 $('retry-scan').onclick = () => startWarehouse(true);
 $('retry-save').onclick = () => sendWarehouse('pfc:scan-save');
 
@@ -209,7 +209,6 @@ window.addEventListener('pfc:scan-progress', ({detail: job}) => {
   if (!job) return;
   const active = ['scan', 'save'].includes(job.phase);
   $('scan').disabled = active;
-  $('scan-all').disabled = active;
   const indicator = $('run-progress');
   indicator.hidden = !active;
   indicator.max = job.total || 1;
