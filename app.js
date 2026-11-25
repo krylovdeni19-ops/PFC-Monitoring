@@ -1191,7 +1191,7 @@ function refreshTransactions() {
   if (transactionsButton.disabled) return;
   $('transactions-prepared').textContent = '—';
   if (document.documentElement.dataset.pfcTransactions !== 'ready') {
-    transactionsStatus.textContent = 'Обновите расширение ПФЦ до 0.11.0 и перезагрузите страницу.';
+    transactionsStatus.textContent = 'Обновите расширение ПФЦ до 0.11.3 и перезагрузите страницу.';
     return;
   }
   transactionsButton.disabled = true;
@@ -1235,7 +1235,7 @@ if (transactionsRoot.dataset.pfcTransactions === 'ready') {
   });
   const readyTimeout = setTimeout(() => {
     ready.disconnect();
-    transactionsStatus.textContent = 'Расширение для транзакций не подключилось. Проверьте версию 0.11.0 и обновите страницу.';
+    transactionsStatus.textContent = 'Расширение для транзакций не подключилось. Проверьте версию 0.11.3 и обновите страницу.';
   }, 8000);
   ready.observe(transactionsRoot, {attributes: true, attributeFilter: ['data-pfc-transactions']});
 }
