@@ -133,7 +133,7 @@ updateScanZone();
 function startWarehouse(retry) {
   showScanError('');
   if (document.documentElement.dataset.pfcWarehouse !== 'ready') {
-    $('progress').textContent = 'Установите расширение ПФЦ 0.7.9 и обновите страницу.';
+    $('progress').textContent = 'Установите расширение ПФЦ 0.8.0 и обновите страницу.';
     return;
   }
   if (!address.validity.valid) {
@@ -178,7 +178,7 @@ window.addEventListener('pfc:scan-progress', ({detail: job}) => {
     ' · Успешно: ' + job.savedCells + ' · Проблемных: ' + job.failed.length;
   const label = {
     scan: 'Проверяем ' + (job.current || 'МХ'), save: 'Записываем обход в Google Таблицу',
-    done: 'Обход записан', error: 'Операция остановилась', interrupted: 'Обход прерван'
+    done: job.savedCells ? 'Обход записан' : 'Обход завершён. Новых результатов нет', error: 'Операция остановилась', interrupted: 'Обход прерван'
   };
   $('progress').textContent = label[job.phase] + '. ' + tally + (job.error ? '. ' + job.error : '');
   const issues = $('issues');
