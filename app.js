@@ -293,6 +293,22 @@ function pollWarehouse() {
   if (document.documentElement.dataset.pfcWarehouse === 'ready') sendWarehouse('pfc:scan-state');
 }
 window.addEventListener('pfc:scan-error', event => showScanError(event.detail));
+function warehouseEta(job) {
+  if (job.phase !== 'scan' || job.checked >= job.total) return '';
+  if (job.checked < Math.min(4, job.total) || !Number.isFinite(job.wbMs) || job.wbMs <= 0) {
+    return ' · Оцениваем время';
+  }
+  const remaining = job.total - job.checked;
+  const pending = Math.max(0, job.savedCells - (job.committed || 0));
+  const writes = job.resumable ? Math.ceil((remaining + pending) / 50) : 1;
+  const completedWrites = Math.ceil((job.committed || 0) / 50);
+  const writeMs = completedWrites && Number.isFinite(job.googleMs) ? job.googleMs / completedWrites : 0;
+  const seconds = Math.ceil((remaining * job.wbMs / job.checked + writes * writeMs) / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const duration = (minutes ? minutes + ' мин ' : '') + seconds % 60 + ' с';
+  return ' · Осталось ≈ ' + duration + (writeMs ? '' : ' до окончания проверки WB');
+}
+
 window.addEventListener('pfc:scan-progress', ({detail: job}) => {
   if (!job) return;
   const active = ['scan', 'save'].includes(job.phase);
@@ -304,7 +320,8 @@ window.addEventListener('pfc:scan-progress', ({detail: job}) => {
   $('retry-scan').hidden = job.phase !== 'done' || !job.failed.length;
   $('retry-save').hidden = !['error', 'interrupted'].includes(job.phase) || (!job.savedCells && !job.resumable);
   $('retry-save').textContent = job.resumable ? 'Продолжить обход' : 'Повторить запись';
-  const tally = 'Проверено: ' + job.checked + ' из ' + job.total +
+  const percent = job.total > 0 ? Math.floor(100 * job.checked / job.total) : 0;
+  const tally = 'Проверено: ' + job.checked + ' из ' + job.total + ' МХ (' + percent + '%)' +
     ' · Успешно: ' + job.savedCells + ' · Проблемных: ' + job.failed.length;
   const label = {
     scan: 'Проверяем ' + (job.current || 'МХ'), save: 'Записываем обход в Google Таблицу',
@@ -313,7 +330,7 @@ window.addEventListener('pfc:scan-progress', ({detail: job}) => {
   const seconds = ms => (ms / 1000).toLocaleString('ru-RU', {maximumFractionDigits: 1}) + ' с';
   const timing = Number.isFinite(job.wbMs) && Number.isFinite(job.googleMs)
     ? ' · WB: ' + seconds(job.wbMs) + ' · Google: ' + seconds(job.googleMs) : '';
-  $('progress').textContent = label[job.phase] + '. ' + tally + timing + (job.error ? '. ' + job.error : '');
+  $('progress').textContent = label[job.phase] + '. ' + tally + warehouseEta(job) + timing + (job.error ? '. ' + job.error : '');
   const issues = $('issues');
   issues.hidden = !job.failed.length;
   issues.querySelector('ul').replaceChildren(...job.failed.map(item => {
