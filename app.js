@@ -3,11 +3,6 @@ const address = $('reader');
 const status = $('status');
 const search = $('search');
 let rows = [];
-const wbBrands = new Map();
-
-function stockBrand(row) {
-  return String(row[6]).trim() || wbBrands.get(String(row[5]).trim()) || '';
-}
 const stockFilter = $('stock-filter');
 address.value = localStorage.getItem('pfc-reader-url') || '';
 $('read-settings').open = !address.value;
@@ -62,7 +57,7 @@ function renderStock() {
         return;
       }
       if (index !== 1) {
-        cell.textContent = index === 6 ? stockBrand(row) : field;
+        cell.textContent = field;
         return;
       }
       const pill = document.createElement('span');
@@ -790,83 +785,5 @@ $('seller-all').addEventListener('click', async event => {
       ' · Проблемных: ' + (checked - saved) + (checked < articles.length ? ' · Остановлено при ошибке записи.' : '');
   } finally {
     button.disabled = false;
-  }
-});
-
-function requestBrands(action, article) {
-  return new Promise((resolve, reject) => {
-    const requestId = crypto.randomUUID();
-    function receive({detail}) {
-      if (detail.requestId !== requestId) return;
-      clearTimeout(timeout);
-      window.removeEventListener('pfc:brand-result', receive);
-      if (detail.error) reject(new Error(detail.error));
-      else resolve(detail.data);
-    }
-    const timeout = setTimeout(() => {
-      window.removeEventListener('pfc:brand-result', receive);
-      reject(new Error('Расширение не ответило вовремя.'));
-    }, 25000);
-    window.addEventListener('pfc:brand-result', receive);
-    sendWarehouse(action, {requestId, article});
-  });
-}
-
-async function restoreBrands() {
-  if (document.documentElement.dataset.pfcBrands !== 'ready') return;
-  const brands = await requestBrands('pfc:brand-list');
-  for (const [article, brand] of Object.entries(brands)) wbBrands.set(article, brand);
-  renderStock();
-}
-
-window.addEventListener('load', () => restoreBrands().catch(() => {}), {once: true});
-
-let brandBatchRunning = false;
-let stopBrandBatch = false;
-$('fill-brands').addEventListener('click', async ({currentTarget: button}) => {
-  const status = $('brand-status');
-  status.hidden = false;
-  if (brandBatchRunning) {
-    stopBrandBatch = true;
-    button.disabled = true;
-    return;
-  }
-  if (document.documentElement.dataset.pfcBrands !== 'ready') {
-    status.textContent = 'Обновите расширение ПФЦ до 0.9.4 и перезагрузите страницу.';
-    return;
-  }
-  brandBatchRunning = true;
-  stopBrandBatch = false;
-  button.textContent = 'Остановить поиск брендов';
-  status.textContent = 'Проверяем сохранённые бренды…';
-  let checked = 0;
-  let found = 0;
-  try {
-    await restoreBrands();
-    const articles = [...new Set(rows.filter(row => row[1] === 'С товаром' && !stockBrand(row))
-      .map(row => String(row[5]).trim()).filter(article => /^[1-9]\d{0,15}$/.test(article)))];
-    if (!articles.length) {
-      status.textContent = 'Среди товаров с НМ нет строк для поиска бренда.';
-      return;
-    }
-    for (const article of articles) {
-      if (stopBrandBatch) break;
-      status.textContent = 'Ищем бренд НМ ' + article + ' · ' + (checked + 1) + ' из ' + articles.length;
-      const brand = await requestBrands('pfc:brand-find', article);
-      checked++;
-      if (brand) {
-        wbBrands.set(article, brand);
-        found++;
-        renderStock();
-      }
-    }
-    status.textContent = (stopBrandBatch ? 'Поиск остановлен. ' : '') + 'Проверено НМ: ' + checked +
-      ' из ' + articles.length + ' · Найдено брендов: ' + found + ' · Не удалось прочитать: ' + (checked - found);
-  } catch (error) {
-    status.textContent = 'Поиск остановлен. Найдено брендов: ' + found + '. ' + error.message;
-  } finally {
-    brandBatchRunning = false;
-    button.disabled = false;
-    button.textContent = 'Заполнить бренды';
   }
 });
