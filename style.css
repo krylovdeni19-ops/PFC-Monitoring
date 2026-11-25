@@ -223,3 +223,8 @@ summary { cursor: pointer; font-weight: 650; }
   .dashboard-grid { grid-template-columns: 1fr; }
   .dashboard-panel > .dashboard-heading { flex-wrap: wrap; }
 }
+
+.dashboard-trend { margin-top: 16px; }
+#trend-comparison { margin-top: 16px; }
+#trend-result { margin: 12px 0; }
+#trend-from, #trend-to { max-width: 100%; }

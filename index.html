@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=102">
-  <script src="app.js?v=102" defer></script>
+  <link rel="stylesheet" href="style.css?v=103">
+  <script src="app.js?v=103" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -126,7 +126,23 @@
           <a href="#store-summary">Все магазины</a>
         </section>
       </div>
-    </section>
+      <section class="panel dashboard-panel dashboard-trend">
+        <div class="dashboard-heading">
+          <h2>Динамика остатков</h2>
+          <label>Показатель <select id="trend-metric"><option value="units">Штуки</option><option value="occupied">Занятые МХ</option></select></label>
+        </div>
+        <p id="trend-status">Загрузите историю обходов.</p>
+        <div id="trend-bars"></div>
+        <div id="trend-comparison" hidden>
+          <div class="filters">
+            <label>Ранний обход (МСК) <select id="trend-from"></select></label>
+            <label>Поздний обход (МСК) <select id="trend-to"></select></label>
+          </div>
+          <p id="trend-result" role="status"></p>
+          <button id="trend-open" class="secondary" type="button">Открыть в «Изменениях»</button>
+        </div>
+      </section>
+      </section>
 
     <section id="store-summary" class="panel inventory" hidden aria-labelledby="store-summary-title">
       <div class="inventory-header">

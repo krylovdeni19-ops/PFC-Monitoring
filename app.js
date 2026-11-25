@@ -552,6 +552,8 @@ window.addEventListener('pfc:changes', ({detail: report}) => {
       ? selected : scanHistory[fallback]?.id ?? '';
   }
   renderHistory();
+  updateTrendOptions();
+  renderTrend();
 });
 
 let locationCatalog = null;
@@ -637,6 +639,105 @@ function openMapCell(address) {
   $('map-details').showModal();
 }
 
+function stockSnapshotTotals(cells, common) {
+  let units = 0;
+  let occupied = 0;
+  for (const [mx, products] of cells) {
+    if (common && !common.has(mx)) continue;
+    if (products.length) occupied++;
+    for (const product of products) units += Number(product[2]) || 0;
+  }
+  return {units, occupied};
+}
+
+function fullTrendScans(history, catalog) {
+  const active = new Set((catalog || []).filter(([, enabled]) => enabled).map(([mx]) => mx));
+  if (!active.size) return [];
+  return history.filter(scan => {
+    const scope = new Set(scan.scope);
+    const cells = new Map(scan.cells);
+    return scope.size === active.size && cells.size === active.size &&
+      [...active].every(mx => scope.has(mx) && cells.has(mx));
+  }).reverse();
+}
+
+function updateTrendOptions() {
+  $('trend-comparison').hidden = scanHistory.length < 2;
+  for (const [id, fallback] of [['trend-from', 1], ['trend-to', 0]]) {
+    const select = $(id);
+    const previous = select.value;
+    select.replaceChildren(...scanHistory.map(scan =>
+      new Option(scan.stamp + ' · МХ: ' + scan.cells.length, scan.id)));
+    select.value = scanHistory.some(scan => scan.id === previous) ? previous : scanHistory[fallback]?.id ?? '';
+  }
+}
+
+function trendPair() {
+  const before = scanHistory.findIndex(scan => scan.id === $('trend-from').value);
+  const after = scanHistory.findIndex(scan => scan.id === $('trend-to').value);
+  return before > after && after >= 0 ? [scanHistory[before], scanHistory[after]] : null;
+}
+
+function renderTrend() {
+  const metric = $('trend-metric').value;
+  const format = new Intl.NumberFormat('ru-RU');
+  const scans = fullTrendScans(scanHistory, locationCatalog);
+  const values = scans.map(scan => stockSnapshotTotals(scan.cells)[metric]);
+  const max = Math.max(1, ...values);
+  const bars = $('trend-bars');
+  bars.replaceChildren();
+  $('trend-status').textContent = scans.length
+    ? 'Полные обходы по текущему справочнику МХ · время МСК'
+    : 'Нет сохранённых полных обходов по текущему справочнику МХ.';
+  for (const [index, scan] of scans.entries()) {
+    const line = document.createElement('div');
+    line.className = 'dashboard-line';
+    const label = document.createElement('div');
+    label.textContent = scan.stamp + ' · ' + format.format(values[index]);
+    const bar = document.createElement('div');
+    bar.className = 'dashboard-track';
+    bar.setAttribute('aria-hidden', 'true');
+    const fill = document.createElement('span');
+    fill.className = 'dashboard-store-fill';
+    fill.style.width = (100 * values[index] / max) + '%';
+    bar.append(fill);
+    line.append(label, bar);
+    bars.append(line);
+  }
+  const pair = trendPair();
+  $('trend-open').disabled = !pair;
+  const result = $('trend-result');
+  if (!pair) {
+    result.textContent = 'Выберите два обхода в хронологическом порядке.';
+    return;
+  }
+  const [before, after] = pair;
+  const earlier = new Map(before.cells);
+  const later = new Map(after.cells);
+  const common = new Set([...earlier.keys()].filter(mx => later.has(mx)));
+  const expected = new Set([...(before.scope ?? earlier.keys()), ...(after.scope ?? later.keys()), ...earlier.keys(), ...later.keys()]);
+  const coverage = 'Сопоставлено ' + common.size + ' из ' + expected.size + ' МХ';
+  if (!common.size) {
+    result.textContent = coverage + '. Нет общих проверенных МХ.';
+    return;
+  }
+  const was = stockSnapshotTotals(earlier, common)[metric];
+  const now = stockSnapshotTotals(later, common)[metric];
+  const delta = new Intl.NumberFormat('ru-RU', {signDisplay: 'exceptZero'}).format(now - was);
+  result.textContent = coverage + ' · Было: ' + format.format(was) + ' · Стало: ' + format.format(now) + ' · Разница: ' + delta;
+}
+
+for (const id of ['trend-metric', 'trend-from', 'trend-to']) $(id).addEventListener('change', renderTrend);
+$('trend-open').addEventListener('click', () => {
+  const pair = trendPair();
+  if (!pair) return;
+  historyMode.value = 'manual';
+  historyFrom.value = pair[0].id;
+  historyTo.value = pair[1].id;
+  renderHistory();
+  location.hash = 'changes';
+});
+
 function dashboardButton(label, action) {
   const button = document.createElement('button');
   button.type = 'button';
@@ -658,6 +759,7 @@ function dashboardZoneCounts(catalog, cells) {
 }
 
 function renderDashboardZones() {
+  renderTrend();
   const container = $('dashboard-zones');
   container.replaceChildren();
   const ready = Boolean(locationCatalog) && mapLoaded;
