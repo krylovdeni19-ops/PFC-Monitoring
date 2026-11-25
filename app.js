@@ -1181,3 +1181,39 @@ $('seller-all').addEventListener('click', async event => {
     button.disabled = false;
   }
 });
+
+const transactionsButton = $('transactions-refresh');
+const transactionsStatus = $('transactions-status');
+let transactionsTimeout;
+transactionsButton.addEventListener('click', () => {
+  $('transactions-totals').hidden = true;
+  if (document.documentElement.dataset.pfcTransactions !== 'ready') {
+    transactionsStatus.textContent = 'Обновите расширение ПФЦ до 0.10.7 и перезагрузите страницу.';
+    return;
+  }
+  transactionsButton.disabled = true;
+  transactionsStatus.textContent = 'Читаем загруженные строки «Мой ПФЦ»…';
+  transactionsTimeout = setTimeout(() => {
+    transactionsStatus.textContent = 'Расширение не ответило. Повторите чтение.';
+    transactionsButton.disabled = false;
+  }, 15000);
+  sendWarehouse('pfc:transactions');
+});
+
+window.addEventListener('pfc:transactions-result', ({detail}) => {
+  if (!transactionsButton.disabled) return;
+  clearTimeout(transactionsTimeout);
+  transactionsButton.disabled = false;
+  if (!detail?.ok) {
+    transactionsStatus.textContent = detail?.error || 'Не удалось прочитать транзакции.';
+    return;
+  }
+  const {date, totals} = detail.data;
+  for (const key of ['prepared', 'assembled', 'labeled']) {
+    const value = totals[key];
+    $('transactions-' + key).textContent = Number.isFinite(value)
+      ? value.toLocaleString('ru-RU') + ' шт.' : 'Нет строки';
+  }
+  transactionsStatus.textContent = date + ' · ПФЦ 399276 · По загруженным строкам WB';
+  $('transactions-totals').hidden = false;
+});

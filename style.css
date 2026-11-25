@@ -283,3 +283,8 @@ summary { cursor: pointer; font-weight: 650; }
 .trend-axis span { position: absolute; top: 6px; transform: translateX(-50%); }
 .trend-missing { width: 12px; height: 18px; }
 .trend-missing::after { width: 4px; height: 4px; border: none; background: var(--muted); }
+
+.transactions-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
+.transactions-totals div { background: var(--canvas); padding: 12px; border-radius: 9px; }
+.transactions-totals dd { margin: 0; font-size: 1.3rem; font-weight: 750; }
+#transactions-status:not(:empty) { margin-block: 8px; }

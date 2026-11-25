@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=106">
-  <script src="app.js?v=106" defer></script>
+  <link rel="stylesheet" href="style.css?v=107">
+  <script src="app.js?v=107" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -43,6 +43,20 @@
       <p id="seller-batch-status" class="seller-batch-status" role="status" hidden></p>
       <details id="seller-batch-errors" class="seller-batch-status" hidden><summary>Проблемные артикулы</summary><ul></ul></details>
       <div id="summary" class="summary" hidden></div>
+    </section>
+
+    <section class="panel dashboard-panel" aria-labelledby="transactions-title">
+      <div class="dashboard-heading">
+        <h2 id="transactions-title">Подготовлено к отгрузке сегодня</h2>
+        <button type="button" class="secondary" id="transactions-refresh">Прочитать транзакции</button>
+      </div>
+      <p id="transactions-status" role="status"></p>
+      <dl class="transactions-totals" id="transactions-totals" hidden>
+        <div><dt>Подготовлено</dt><dd id="transactions-prepared"></dd></div>
+        <div><dt>Собрано</dt><dd id="transactions-assembled"></dd></div>
+        <div><dt>Оклеено</dt><dd id="transactions-labeled"></dd></div>
+      </dl>
+      <a href="https://my-pfc.wb.ru/all-transactions" target="_blank" rel="noopener noreferrer">Открыть «Все транзакции»</a>
     </section>
 
     <section id="stock" class="panel inventory" hidden>
