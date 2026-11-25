@@ -199,7 +199,7 @@ function startWarehouse(retry) {
 }
 $('scan').onclick = () => startWarehouse(false);
 $('retry-scan').onclick = () => startWarehouse(true);
-$('retry-save').onclick = () => sendWarehouse('pfc:scan-save');
+$('retry-save').onclick = () => sendWarehouse('pfc:scan-save', {reader: address.value.trim(), writer: writer.value.trim()});
 
 function pollWarehouse() {
   if (document.documentElement.dataset.pfcWarehouse === 'ready') sendWarehouse('pfc:scan-state');
