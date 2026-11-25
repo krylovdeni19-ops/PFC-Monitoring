@@ -73,3 +73,8 @@ summary { cursor: pointer; font-weight: 650; }
   .inventory-header, .settings { padding: 14px; }
   .filters, .filters label, .filters input, .filters select { width: 100%; }
 }
+
+.topbar nav { display: flex; gap: 16px; flex-wrap: wrap; }
+#changes table { min-width: 640px; }
+#changes td:nth-child(2) { white-space: normal; }
+.changes-gap { margin: 0 20px 14px; color: var(--muted); overflow-wrap: anywhere; }

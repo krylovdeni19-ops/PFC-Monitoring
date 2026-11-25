@@ -38,7 +38,7 @@ function renderStock() {
     });
     body.append(tr);
   }
-  document.querySelector('tbody').replaceChildren(body);
+  document.querySelector('#stock tbody').replaceChildren(body);
 }
 search.addEventListener('input', renderStock);
 stockFilter.addEventListener('change', renderStock);
@@ -180,3 +180,41 @@ function autoLoad() {
   sendWarehouse('pfc:connect', {url: address.value, background: true});
 }
 window.addEventListener('load', autoLoad, {once: true});
+
+window.addEventListener('pfc:changes', ({detail: report}) => {
+  const status = $('changes-status');
+  const body = $('changes-rows');
+  const missing = $('changes-missing');
+  body.replaceChildren();
+  missing.hidden = true;
+  $('changes-table').hidden = true;
+  if (!report || report.unavailable || report.error) {
+    status.textContent = report?.error || (report?.unavailable
+      ? 'В журнале пока нет одного обхода, где подтверждены все 136 МХ.'
+      : 'Для сравнения обновите расширение и приложение чтения.');
+    return;
+  }
+  status.textContent = 'Обход по ' + report.to + ' МСК · Сопоставлено МХ: ' + report.checked +
+    (report.from ? ' · Предыдущие замеры по ' + report.from + ' МСК' : '') +
+    ' · Товаров с изменениями: ' + report.products.length;
+  missing.hidden = !report.missing.length;
+  missing.textContent = 'Без предыдущего замера: ' + report.missing.join(', ');
+  $('changes-table').hidden = !report.products.length;
+  for (const item of report.products) {
+    const row = body.insertRow();
+    const delta = item.now - item.was;
+    for (const value of [item.barcode, item.name, item.was, item.now, delta > 0 ? '+' + delta : delta]) {
+      row.insertCell().textContent = value;
+    }
+    const list = document.createElement('details');
+    const title = document.createElement('summary');
+    title.textContent = delta === 0 && item.cells.length > 1 ? 'Возможное перемещение' : 'МХ: ' + item.cells.length;
+    list.append(title);
+    for (const cell of item.cells) {
+      const line = document.createElement('div');
+      line.textContent = cell.mx + ' · ' + cell.was + ' → ' + cell.now;
+      list.append(line);
+    }
+    row.insertCell().append(list);
+  }
+});

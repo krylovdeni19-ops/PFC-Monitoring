@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=072">
-  <script src="app.js?v=072" defer></script>
+  <link rel="stylesheet" href="style.css?v=074">
+  <script src="app.js?v=074" defer></script>
 </head>
 <body>
   <header class="topbar">
     <div class="topbar-inner">
       <a class="brand" href="./"><span class="brand-mark" aria-hidden="true">П</span> ПФЦ Мониторинг</a>
-      <a class="toplink" href="#settings">Настройки</a>
+      <nav><a class="toplink" href="#changes">Изменения</a> <a class="toplink" href="#settings">Настройки</a></nav>
     </div>
   </header>
   <main>
@@ -48,6 +48,16 @@
       </div>
       <div class="table" tabindex="0" role="region" aria-label="Таблица остатков">
         <table><thead><tr><th>МХ</th><th>Результат</th><th>Баркод</th><th>Название</th><th>Количество</th><th>Артикул WB</th><th>Бренд</th><th>Проверено МСК</th></tr></thead><tbody></tbody></table>
+      </div>
+    </section>
+
+    <section id="changes" class="panel inventory" aria-labelledby="changes-title">
+      <div class="inventory-header">
+        <div><h2 id="changes-title">Изменения остатков</h2><p id="changes-status" role="status">Загрузите сохранённые остатки.</p></div>
+      </div>
+      <p id="changes-missing" class="changes-gap" hidden></p>
+      <div id="changes-table" class="table" tabindex="0" role="region" aria-label="Изменения по баркодам" hidden>
+        <table><thead><tr><th>Баркод</th><th>Название</th><th>Было</th><th>Стало</th><th>Разница</th><th>Изменения по МХ</th></tr></thead><tbody id="changes-rows"></tbody></table>
       </div>
     </section>
 
