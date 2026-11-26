@@ -696,6 +696,19 @@ function dailyTrendScans(scans) {
   return days;
 }
 
+function drawDashboardScale(plot, low, high, format) {
+  const step = Math.max(1, Math.ceil((high - low) / 4));
+  const ticks = [...new Set([low, ...[1, 2, 3].map(i => low + step * i).filter(value => value < high), high])];
+  for (const value of ticks) {
+    const tick = document.createElement('div');
+    tick.className = 'dashboard-scale-tick';
+    tick.style.top = (10 + 80 * (high - value) / (high - low)) + '%';
+    tick.textContent = format.format(value);
+    tick.setAttribute('aria-hidden', 'true');
+    plot.append(tick);
+  }
+}
+
 function drawTrend(chart, days, values, format, lastDay, period) {
   const firstDay = lastDay - period + 1;
   const date = day => new Intl.DateTimeFormat('ru-RU', {
@@ -707,6 +720,7 @@ function drawTrend(chart, days, values, format, lastDay, period) {
   const high = Math.max(0, ...values.values()) + padding;
   const plot = chart.querySelector('.trend-plot');
   plot.replaceChildren();
+  drawDashboardScale(plot, low, high, format);
   let previous;
   const prior = [...days].filter(([day]) => day < firstDay).at(-1);
   let lastValue = prior ? stockSnapshotTotals(prior[1].cells)[$('trend-metric').value] : undefined;
@@ -715,8 +729,8 @@ function drawTrend(chart, days, values, format, lastDay, period) {
     const value = values.get(day);
     const scan = days.get(day);
     const point = {
-      x: 4 + 92 * (day - firstDay) / (period - 1),
-      y: scan ? 12 + 72 * (high - value) / (high - low) : 94
+      x: 14 + 83 * (day - firstDay) / (period - 1),
+      y: scan ? 10 + 80 * (high - value) / (high - low) : 94
     };
     if (previous && scan) {
       const line = document.createElement('span');
@@ -744,12 +758,11 @@ function drawTrend(chart, days, values, format, lastDay, period) {
       label = detail;
     }
   }
-  chart.querySelector('.trend-scale').textContent = 'Шкала: ' + format.format(low) + '–' + format.format(high);
   const axis = chart.querySelector('.trend-axis');
   axis.replaceChildren(...[0, ...(period === 7 ? [1, 2, 3, 4, 5] : [7, 14, 21]), period - 1].map(offset => {
     const tick = document.createElement('span');
     tick.textContent = date(firstDay + offset);
-    tick.style.left = (4 + 92 * offset / (period - 1)) + '%';
+    tick.style.left = (14 + 83 * offset / (period - 1)) + '%';
     return tick;
   }));
   $('trend-point-value').textContent = label || 'В выбранном периоде нет полного обхода.';
@@ -857,12 +870,24 @@ function renderDashboardZones() {
       bar.append(segment);
     });
     const details = document.createElement('p');
-    details.textContent = 'Занято: ' + values[0] + ' · Пусто: ' + values[1] + ' · Не проверено: ' + values[2];
-    line.append(dashboardButton(label, () => {
+    details.className = 'dashboard-zone-legend';
+    for (const [index, name] of ['Занято', 'Пусто', 'Не проверено'].entries()) {
+      const item = document.createElement('span');
+      item.className = ['zone-occupied', 'zone-empty', 'zone-unknown'][index];
+      item.textContent = name + ' ' + values[index];
+      details.append(item);
+    }
+    const header = document.createElement('div');
+    header.className = 'dashboard-heading';
+    const occupancy = document.createElement('strong');
+    occupancy.textContent = total ? Math.round(100 * values[0] / total) + '%' : '—';
+    occupancy.title = 'Доля занятых активных МХ';
+    header.append(dashboardButton(label, () => {
       mapZone.value = zone;
       renderWarehouseMap();
       location.hash = 'warehouse-map';
-    }), bar, details);
+    }), occupancy);
+    line.append(header, bar, details);
     container.append(line);
   }
 }
@@ -873,7 +898,7 @@ function renderDashboardStores() {
   const byUnits = $('dashboard-metric').value === 'units';
   const metric = group => byUnits ? group.units : group.locations.size;
   const groups = summarizeStores(rows).sort((a, b) => metric(b) - metric(a)).slice(0, 10);
-  $('dashboard-stores-status').textContent = groups.length ? 'До 10 групп по выбранному показателю.' : 'В загруженных остатках нет товаров.';
+  $('dashboard-stores-status').textContent = groups.length ? 'Показано: ' + groups.length + ' · по убыванию' : 'В загруженных остатках нет товаров.';
   const format = new Intl.NumberFormat('ru-RU');
   for (const group of groups) {
     const line = document.createElement('div');
@@ -1274,7 +1299,8 @@ function renderShipmentChart({today, history, saved}) {
   const axis = document.createElement('div');
   axis.className = 'trend-axis';
   const detail = $('shipment-point');
-  const x = index => 5 + 90 * index / (days.length - 1);
+  const x = index => 14 + 83 * index / (days.length - 1);
+  drawDashboardScale(plot, 0, max, new Intl.NumberFormat('ru-RU'));
   let previous;
   let latest;
   for (const [index, day] of days.entries()) {

@@ -295,3 +295,38 @@ summary { cursor: pointer; font-weight: 650; }
 
 .shipment-plot { margin-top: 12px; }
 #shipment-point { font-weight: 650; }
+
+#dashboard { gap: 14px; }
+#dashboard .dashboard-trend { margin-top: 0; }
+#dashboard .dashboard-panel { padding: clamp(12px, 1.5vw, 18px); }
+#dashboard .dashboard-heading { flex-wrap: wrap; gap: 6px 12px; justify-content: flex-start; }
+#dashboard .dashboard-heading h2 { margin-inline-end: auto; }
+#dashboard .dashboard-heading strong { margin-inline-start: auto; font-variant-numeric: tabular-nums; }
+#dashboard select { min-height: 34px; padding-block: 4px; }
+#dashboard .dashboard-line { margin: 7px 0; }
+#dashboard .dashboard-track { height: 6px; margin-block: 3px 5px; }
+#dashboard-zones .dashboard-track { height: 10px; }
+#dashboard-zones .dashboard-line { padding: 8px 10px; background: var(--canvas); border-radius: 10px; }
+.dashboard-zone-legend { display: flex; flex-wrap: wrap; gap: 2px 12px; }
+.dashboard-zone-legend span::before {
+  content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-inline-end: 5px;
+}
+.zone-occupied::before { background: #267353; }
+.zone-empty::before { background: #b9d7c9; }
+.zone-unknown::before { background: #8795a8; }
+#dashboard .trend-plot {
+  min-height: 0; height: clamp(126px, 16vw, 185px);
+  border: 0; border-radius: 8px; background: #f7f9fc;
+}
+.dashboard-scale-tick {
+  position: absolute; inset-inline: 0; transform: translateY(-50%); display: flex;
+  align-items: center; gap: 5px; padding: 0 5px; color: var(--muted); font-size: .73rem; pointer-events: none;
+}
+.dashboard-scale-tick::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+#dashboard .trend-point { width: 14px; height: 20px; }
+#dashboard .trend-point::after { width: 8px; height: 8px; }
+#dashboard .trend-missing::after { width: 4px; height: 4px; }
+#dashboard .trend-axis { font-size: .73rem; }
+#dashboard .trend-axis span { white-space: nowrap; }
+#trend-point-value, #shipment-point { margin-block: 3px 0; font-size: .87rem; }
+#trend-comparison { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; }
