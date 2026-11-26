@@ -7,8 +7,8 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./pfc-192.png">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=125">
-  <script src="app.js?v=125" defer></script>
+  <link rel="stylesheet" href="style.css?v=126">
+  <script src="app.js?v=126" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -25,12 +25,17 @@
     </div>
   </header>
   <main>
+    <nav class="mobile-tabs" aria-label="Разделы склада на телефоне">
+      <a href="#stock-view"><span aria-hidden="true">▤</span>Остатки</a>
+      <a href="#warehouse-map"><span aria-hidden="true">▦</span>Карта</a>
+      <a href="#dashboard"><span aria-hidden="true">▥</span>Дашборд</a>
+    </nav>
     <section id="mobile-access" class="panel settings" hidden>
       <h2>Остатки на телефоне</h2>
       <form id="mobile-reader-form">
         <label for="mobile-reader-url">Ссылка Apps Script чтения</label>
         <input type="url" id="mobile-reader-url" placeholder="https://script.google.com/macros/s/…/exec" required>
-        <button type="submit">Открыть мобильные остатки</button>
+        <button type="submit">Войти и загрузить данные</button>
       </form>
       <p id="mobile-reader-status" role="status"></p>
     </section>

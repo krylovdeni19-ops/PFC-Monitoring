@@ -1004,6 +1004,10 @@ renderWarehouseMap();
 const viewLinks = [...document.querySelectorAll('.view-nav a')];
 function showView() {
   const current = viewLinks.find(link => link.hash === location.hash) || viewLinks[0];
+  for (const tab of document.querySelectorAll('.mobile-tabs a')) {
+    if (tab.hash === current.hash) tab.setAttribute('aria-current', 'page');
+    else tab.removeAttribute('aria-current');
+  }
   for (const link of viewLinks) {
     const active = link === current;
     $(link.hash.slice(1)).hidden = !active;
@@ -1298,7 +1302,9 @@ window.addEventListener('pfc:transactions-result', ({detail}) => {
 });
 
 const transactionsRoot = document.documentElement;
-if (transactionsRoot.dataset.pfcTransactions === 'ready') {
+if (window.matchMedia('(max-width: 720px)').matches) {
+  // Mobile metrics are supplied by the authenticated reader.
+} else if (transactionsRoot.dataset.pfcTransactions === 'ready') {
   refreshTransactions();
 } else {
   transactionsStatus.textContent = 'Ждём подключения расширения для чтения транзакций…';
@@ -1476,27 +1482,86 @@ function mobileReaderAddress(value) {
     throw new Error('Укажите ссылку /exec из проекта Apps Script чтения.');
   }
   url.hash = '';
-  url.search = '?mobile=1';
+  url.search = '';
   return url;
 }
 
 const mobileAccess = $('mobile-access');
 const mobileReaderInput = $('mobile-reader-url');
-const mobileDevice = window.matchMedia('(pointer: coarse) and (hover: none)');
+const mobileDevice = window.matchMedia('(max-width: 720px)');
+const mobileStatus = $('mobile-reader-status');
+const mobileForm = $('mobile-reader-form');
+let pendingMobileRead;
 function showMobileAccess() {
   mobileAccess.hidden = !mobileDevice.matches;
 }
 mobileDevice.addEventListener('change', showMobileAccess);
 showMobileAccess();
 mobileReaderInput.value = address.value;
-$('mobile-reader-form').addEventListener('submit', event => {
+
+mobileForm.addEventListener('submit', event => {
   event.preventDefault();
+  if (pendingMobileRead) return;
+  let url;
   try {
-    const url = mobileReaderAddress(mobileReaderInput.value);
-    localStorage.setItem('pfc-reader-url', url.origin + url.pathname);
-    address.value = url.origin + url.pathname;
-    location.assign(url.href);
+    url = mobileReaderAddress(mobileReaderInput.value);
   } catch {
-    $('mobile-reader-status').textContent = 'Проверьте ссылку Apps Script чтения. Она должна заканчиваться на /exec.';
+    mobileStatus.textContent = 'Укажите ссылку /exec из проекта Apps Script чтения.';
+    return;
   }
+  const nonce = crypto.randomUUID();
+  url.searchParams.set('mobileBridge', nonce);
+  const popup = window.open(url.href, '_blank', 'popup,width=480,height=620');
+  if (!popup) {
+    mobileStatus.textContent = 'Разрешите открытие окна Google и нажмите кнопку ещё раз.';
+    return;
+  }
+  const button = mobileForm.querySelector('button');
+  button.disabled = true;
+  address.value = url.origin + url.pathname;
+  try { localStorage.setItem('pfc-reader-url', address.value); } catch {}
+  mobileStatus.textContent = 'Войдите в открывшемся окне Google. Данные появятся здесь.';
+  const timeout = setInterval(() => {
+    if (!popup.closed) return;
+    clearInterval(timeout);
+    pendingMobileRead = undefined;
+    button.disabled = false;
+    mobileStatus.textContent = 'Окно Google закрыто. Для загрузки нажмите кнопку ещё раз.';
+  }, 750);
+  pendingMobileRead = {nonce, popup, timeout, button};
+});
+
+window.addEventListener('message', event => {
+  const pending = pendingMobileRead;
+  const message = event.data;
+  if (!pending || message?.type !== 'pfc-mobile-data' || message.nonce !== pending.nonce ||
+      !/^https:\/\/(?:script\.google\.com|[a-z0-9-]+-script\.googleusercontent\.com|script\.googleusercontent\.com)$/.test(event.origin) ||
+      event.source?.top !== pending.popup) return;
+  clearInterval(pending.timeout);
+  pendingMobileRead = undefined;
+  pending.button.disabled = false;
+  pending.popup.close();
+  if (message.error) {
+    mobileStatus.textContent = message.error;
+    return;
+  }
+  const data = message.data;
+  if (!data || !Array.isArray(data.locations) || !acceptStock(data.rows)) {
+    mobileStatus.textContent = 'Не удалось загрузить данные склада.';
+    return;
+  }
+  acceptLocationCatalog(data.locations);
+  if (data.changes) window.dispatchEvent(new CustomEvent('pfc:changes', {detail: data.changes}));
+  const today = new Intl.DateTimeFormat('ru-RU', {
+    day: 'numeric', month: 'numeric', year: 'numeric', timeZone: 'Europe/Moscow'
+  }).formatToParts(new Date()).filter(part => ['day', 'month', 'year'].includes(part.type))
+    .map(part => Number(part.value)).join('.');
+  shipmentHistory = {today, history: data.history || {}, saved: true};
+  renderShipmentChart(shipmentHistory);
+  const prepared = data.history?.[today]?.prepared;
+  $('transactions-prepared').textContent = Number.isFinite(prepared) ? prepared.toLocaleString('ru-RU') + ' шт.' : '—';
+  transactionsStatus.textContent = '';
+  mobileStatus.textContent = 'Данные из Google Таблицы загружены.';
+  pending.button.textContent = 'Обновить данные';
+  mobileAccess.classList.add('mobile-connected');
 });
