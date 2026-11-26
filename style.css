@@ -365,3 +365,6 @@ summary { cursor: pointer; font-weight: 650; }
 .shipment-change-up { color: #216044; }
 .shipment-change-down { color: #942c35; }
 .shipment-coverage { display: block; color: var(--muted); font-size: .7rem; }
+#seller-start-options { margin-top: 10px; font-size: .86rem; }
+#seller-start-options label { color: #dbe7f1; margin-top: 6px; }
+#seller-start-options input { width: min(100%, 230px); }

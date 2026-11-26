@@ -1146,7 +1146,32 @@ window.addEventListener('pfc:seller-result', event => {
   $('seller-fields').hidden = false;
 });
 
-$('seller-all').addEventListener('click', async event => {
+function requestSellerBatchArticle(article, writerAddress) {
+  const requestId = crypto.randomUUID();
+  return new Promise(resolve => {
+    function receive(event) {
+      if (event.detail.requestId !== requestId) return;
+      window.removeEventListener('pfc:seller-result', receive);
+      clearTimeout(timeout);
+      resolve(event.detail);
+    }
+    const timeout = setTimeout(() => {
+      window.removeEventListener('pfc:seller-result', receive);
+      resolve({saveError: 'Расширение не ответило вовремя.'});
+    }, 90000);
+    window.addEventListener('pfc:seller-result', receive);
+    window.dispatchEvent(new CustomEvent('pfc:seller-find', {detail: {article, requestId, writer: writerAddress}}));
+  });
+}
+
+const sellerResumeKey = 'pfc-seller-resume-122';
+const sellerBatchButton = $('seller-all');
+function updateSellerBatchButton() {
+  sellerBatchButton.textContent = sessionStorage.getItem(sellerResumeKey)
+    ? 'Продолжить проверку поставщиков' : 'Проверить поставщиков по занятым МХ';
+}
+updateSellerBatchButton();
+sellerBatchButton.addEventListener('click', async event => {
   const button = event.currentTarget;
   const status = $('seller-batch-status');
   const errors = $('seller-batch-errors');
@@ -1170,42 +1195,58 @@ $('seller-all').addEventListener('click', async event => {
     return;
   }
   const writerAddress = writer.value.trim();
+  const manual = $('seller-start-article').value.trim();
+  const checkpoint = sessionStorage.getItem(sellerResumeKey);
+  const start = manual || checkpoint;
+  const first = start ? articles.indexOf(start) : 0;
+  if (first < 0) {
+    status.textContent = 'Артикул ' + start + ' отсутствует в текущем списке активных МХ.';
+    if (!manual) sessionStorage.removeItem(sellerResumeKey);
+    updateSellerBatchButton();
+    return;
+  }
+  $('seller-start-article').value = '';
+  sessionStorage.setItem(sellerResumeKey, articles[first]);
+  const remaining = articles.slice(first);
   button.disabled = true;
   let saved = 0;
   let checked = 0;
+  let pausedOnWrite = false;
   try {
-    for (const article of articles) {
-      status.textContent = 'Проверяем НМ ' + article + ' · ' + (checked + 1) + ' из ' + articles.length;
-      const requestId = crypto.randomUUID();
-      const result = await new Promise(resolve => {
-        function receive(event) {
-          if (event.detail.requestId !== requestId) return;
-          window.removeEventListener('pfc:seller-result', receive);
-          clearTimeout(timeout);
-          resolve(event.detail);
-        }
-        const timeout = setTimeout(() => {
-          window.removeEventListener('pfc:seller-result', receive);
-          resolve({saveError: 'Расширение не ответило вовремя.'});
-        }, 90000);
-        window.addEventListener('pfc:seller-result', receive);
-        window.dispatchEvent(new CustomEvent('pfc:seller-find', {detail: {article, requestId, writer: writerAddress}}));
-      });
+    for (const [index, article] of remaining.entries()) {
+      sessionStorage.setItem(sellerResumeKey, article);
+      status.textContent = 'Проверяем НМ ' + article + ' · ' + (first + index + 1) + ' из ' + articles.length;
+      let result = await requestSellerBatchArticle(article, writerAddress);
+      for (const delay of [2000, 5000]) {
+        if (result.saved || !result.saveError) break;
+        status.textContent = 'Ошибка записи НМ ' + article + ' · повтор через ' + delay / 1000 + ' с';
+        await new Promise(resolve => setTimeout(resolve, delay));
+        const retry = await requestSellerBatchArticle(article, writerAddress);
+        if (retry.saved || retry.saveError) result = retry;
+        else break;
+      }
       checked++;
       if (result.saved) {
         saved++;
         continue;
       }
       const li = document.createElement('li');
-      li.textContent = article + ' · ' + (result.saveError || result.error || 'Запись не подтверждена.');
+      li.textContent = article + ' · ' + (result.saveError || result.error || 'Запись не подтверждена.').replace(/ и нажмите «Продолжить обход»/, '');
       list.append(li);
       errors.hidden = false;
-      if (result.saveError) break;
+      if (result.saveError) {
+        pausedOnWrite = true;
+        break;
+      }
     }
-    status.textContent = 'Проверено: ' + checked + ' из ' + articles.length + ' · Записано: ' + saved +
-      ' · Проблемных: ' + (checked - saved) + (checked < articles.length ? ' · Остановлено при ошибке записи.' : '');
+    const blocked = pausedOnWrite;
+    if (!blocked) sessionStorage.removeItem(sellerResumeKey);
+    status.textContent = 'Проверено за этот запуск: ' + checked + ' из ' + remaining.length + ' · Записано: ' + saved +
+      ' · Проблемных: ' + (checked - saved) +
+      (blocked ? ' · Проверьте ссылку записи /exec. Затем нажмите «Продолжить проверку поставщиков».' : '');
   } finally {
     button.disabled = false;
+    updateSellerBatchButton();
   }
 });
 

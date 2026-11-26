@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=121">
-  <script src="app.js?v=121" defer></script>
+  <link rel="stylesheet" href="style.css?v=123">
+  <script src="app.js?v=123" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -41,6 +41,11 @@
       <progress id="run-progress" aria-label="Прогресс проверки МХ" hidden></progress>
       <p id="scan-error" role="alert" hidden></p>
       <details id="issues" hidden><summary>Проблемные МХ</summary><ul></ul></details>
+      <details id="seller-start-options">
+        <summary>Начать проверку поставщиков с артикула</summary>
+        <label for="seller-start-article">Артикул WB</label>
+        <input id="seller-start-article" inputmode="numeric">
+      </details>
       <p id="seller-batch-status" class="seller-batch-status" role="status" hidden></p>
       <details id="seller-batch-errors" class="seller-batch-status" hidden><summary>Проблемные артикулы</summary><ul></ul></details>
       <div id="summary" class="summary">
