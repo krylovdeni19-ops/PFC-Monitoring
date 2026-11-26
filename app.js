@@ -1274,6 +1274,42 @@ if (transactionsRoot.dataset.pfcTransactions === 'ready') {
   ready.observe(transactionsRoot, {attributes: true, attributeFilter: ['data-pfc-transactions']});
 }
 
+function shipmentPeriodTotals(days) {
+  let covered = 0;
+  let total = 0;
+  let peak;
+  for (const day of days) {
+    if (!Number.isFinite(day.value)) continue;
+    covered++;
+    total += day.value;
+    if (!peak || day.value > peak.value) peak = day;
+  }
+  return {covered, total, peak};
+}
+
+function renderShipmentTotals(days) {
+  const {covered, total, peak} = shipmentPeriodTotals(days);
+  const format = new Intl.NumberFormat('ru-RU', {maximumFractionDigits: 1});
+  const units = value => format.format(value) + ' шт.';
+  const totals = $('shipment-totals');
+  const metrics = [
+    ['Всего за период', covered ? units(total) : '—'],
+    ['Среднее за день с данными', covered ? units(total / covered) : '—'],
+    ['Пик отгрузок', peak ? peak.label + ' · ' + units(peak.value) : '—'],
+    ['Дней с данными', covered + ' из ' + days.length]
+  ];
+  totals.replaceChildren(...metrics.map(([name, value]) => {
+    const card = document.createElement('div');
+    const label = document.createElement('dt');
+    const number = document.createElement('dd');
+    label.textContent = name;
+    number.textContent = value;
+    card.append(label, number);
+    return card;
+  }));
+  totals.hidden = false;
+}
+
 function renderShipmentChart({today, history, saved}) {
   const status = $('shipment-status');
   if (!today || !history) {
@@ -1290,6 +1326,7 @@ function renderShipmentChart({today, history, saved}) {
     return {label: d + '.' + String(m).padStart(2, '0'),
       value: history[[d, m, date.getUTCFullYear()].join('.')]?.prepared};
   });
+  renderShipmentTotals(days);
   const max = Math.max(1, ...days.map(day => day.value ?? 0));
   status.textContent = 'Последние ' + period + ' дней по МСК · штуки · ' + (saved ? 'Google Таблица' : 'загруженные строки WB');
   const plot = document.createElement('div');

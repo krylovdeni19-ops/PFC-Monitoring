@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=119">
-  <script src="app.js?v=119" defer></script>
+  <link rel="stylesheet" href="style.css?v=120">
+  <script src="app.js?v=120" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -135,6 +135,7 @@
           <label>Период <select id="shipment-period"><option value="7">7 дней</option><option value="30">30 дней</option></select></label>
         </div>
         <p id="shipment-status" role="status">Данные появятся после чтения транзакций WB.</p>
+        <dl id="shipment-totals" class="shipment-kpis" aria-label="Итоги за выбранный период" hidden></dl>
         <div class="shipment-legend">
           <span>За день</span><span>Скользящее среднее (до 7 дней)</span>
         </div>

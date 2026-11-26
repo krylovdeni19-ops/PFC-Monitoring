@@ -355,3 +355,8 @@ summary { cursor: pointer; font-weight: 650; }
     grid-template-areas: "capacity" "ranking" "shipments";
   }
 }
+
+.shipment-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-block: 10px; }
+.shipment-kpis > div { min-width: 0; padding: 7px 9px; border-radius: 8px; background: var(--canvas); }
+.shipment-kpis dt { color: var(--muted); font-size: .75rem; }
+.shipment-kpis dd { margin: 1px 0 0; font-size: .95rem; font-weight: 700; font-variant-numeric: tabular-nums; }
