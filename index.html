@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=118">
-  <script src="app.js?v=118" defer></script>
+  <link rel="stylesheet" href="style.css?v=119">
+  <script src="app.js?v=119" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -115,12 +115,12 @@
     <section id="dashboard" class="view" hidden aria-labelledby="dashboard-title">
       <header class="overview"><h1 id="dashboard-title">Дашборд склада</h1></header>
       <div class="dashboard-grid">
-        <section class="panel dashboard-panel">
+        <section class="panel dashboard-panel dashboard-capacity">
           <h2>Загрузка склада</h2>
           <p id="dashboard-zones-status">Загрузите сохранённые остатки и справочник МХ.</p>
           <div id="dashboard-zones"></div>
         </section>
-        <section class="panel dashboard-panel">
+        <section class="panel dashboard-panel dashboard-ranking">
           <div class="dashboard-heading">
             <h2>Остатки по магазинам</h2>
             <label>Показатель <select id="dashboard-metric"><option value="units">Штуки</option><option value="locations">МХ</option></select></label>
@@ -129,8 +129,7 @@
           <div id="dashboard-stores"></div>
           <a href="#store-summary">Все магазины</a>
         </section>
-      </div>
-      <section class="panel dashboard-panel dashboard-trend">
+      <section class="panel dashboard-panel dashboard-trend dashboard-shipments">
         <div class="dashboard-heading">
           <h2>Подготовлено к отгрузке по дням</h2>
           <label>Период <select id="shipment-period"><option value="7">7 дней</option><option value="30">30 дней</option></select></label>
@@ -142,6 +141,7 @@
         <div id="shipment-chart"></div>
         <p id="shipment-point" role="status"></p>
       </section>
+      </div>
       <section class="panel dashboard-panel dashboard-trend">
         <div class="dashboard-heading">
           <h2>Динамика остатков</h2>

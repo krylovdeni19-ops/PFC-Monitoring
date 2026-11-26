@@ -338,3 +338,20 @@ summary { cursor: pointer; font-weight: 650; }
 .shipment-average { z-index: 1; background: #9a4612; }
 #dashboard .shipment-value { z-index: 2; min-height: 22px; }
 #dashboard .shipment-value::after { background: #fff; border-color: #355f8b; }
+
+#dashboard .dashboard-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, .9fr);
+  grid-template-rows: auto 1fr;
+  grid-template-areas: "capacity ranking" "shipments ranking";
+  align-items: start;
+}
+.dashboard-capacity { grid-area: capacity; }
+.dashboard-ranking { grid-area: ranking; }
+.dashboard-shipments { grid-area: shipments; }
+@media (max-width: 720px) {
+  #dashboard .dashboard-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    grid-template-areas: "capacity" "ranking" "shipments";
+  }
+}
