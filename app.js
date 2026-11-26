@@ -1267,23 +1267,49 @@ function renderShipmentChart({today, history, saved}) {
   });
   const max = Math.max(1, ...days.map(day => day.value ?? 0));
   status.textContent = 'Последние ' + period + ' дней по МСК · штуки · ' + (saved ? 'Google Таблица' : 'загруженные строки WB');
-  $('shipment-chart').style.gridTemplateColumns = 'repeat(' + period + ', minmax(30px, 1fr))';
-  $('shipment-chart').replaceChildren(...days.map(day => {
-    const item = document.createElement('div');
-    const value = document.createElement('strong');
-    value.textContent = day.value == null ? '—' : day.value.toLocaleString('ru-RU');
-    const track = document.createElement('div');
-    track.className = 'shipment-track';
-    track.setAttribute('aria-hidden', 'true');
-    const bar = document.createElement('span');
-    bar.style.height = (100 * (day.value ?? 0) / max) + '%';
-    track.append(bar);
-    const label = document.createElement('span');
-    label.textContent = day.label;
-    item.append(value, track, label);
-    return item;
-  }));
-  if (days.some(day => day.value == null)) status.textContent += ' · тире — нет данных';
+  const plot = document.createElement('div');
+  plot.className = 'trend-plot shipment-plot';
+  plot.setAttribute('role', 'group');
+  plot.setAttribute('aria-label', 'Подготовлено к отгрузке по дням');
+  const axis = document.createElement('div');
+  axis.className = 'trend-axis';
+  const detail = $('shipment-point');
+  const x = index => 5 + 90 * index / (days.length - 1);
+  let previous;
+  let latest;
+  for (const [index, day] of days.entries()) {
+    if (index === 0 || index === days.length - 1 || index === Math.floor(days.length / 2)) {
+      const tick = document.createElement('span');
+      tick.textContent = day.label;
+      tick.style.left = x(index) + '%';
+      axis.append(tick);
+    }
+    if (!Number.isFinite(day.value)) {
+      previous = undefined;
+      continue;
+    }
+    const point = {x: x(index), y: 90 - 80 * day.value / max};
+    if (previous) {
+      const line = document.createElement('span');
+      line.className = 'trend-segment';
+      line.style.clipPath = `polygon(${previous.x}% ${previous.y - .6}%, ${point.x}% ${point.y - .6}%, ${point.x}% ${point.y + .6}%, ${previous.x}% ${previous.y + .6}%)`;
+      plot.append(line);
+    }
+    latest = day.label + ' · ' + day.value.toLocaleString('ru-RU') + ' шт.';
+    const label = latest;
+    const dot = dashboardButton('', () => { detail.textContent = label; });
+    dot.className = 'trend-point';
+    dot.style.left = point.x + '%';
+    dot.style.top = point.y + '%';
+    dot.title = label;
+    dot.setAttribute('aria-label', label);
+    dot.addEventListener('focus', () => { detail.textContent = label; });
+    plot.append(dot);
+    previous = point;
+  }
+  $('shipment-chart').replaceChildren(plot, axis);
+  detail.textContent = latest || 'За выбранный период нет данных.';
+  if (days.some(day => day.value == null)) status.textContent += ' · разрыв — нет данных';
 }
 
 $('shipment-period').addEventListener('change', () => {
