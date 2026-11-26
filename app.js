@@ -1574,3 +1574,156 @@ window.addEventListener('message', event => {
   pending.button.textContent = 'Обновить данные';
   mobileAccess.classList.add('mobile-connected');
 });
+
+const dashboardModules = $('dashboard-modules');
+const dashboardEdit = $('dashboard-edit');
+const dashboardReset = $('dashboard-reset');
+const dashboardLayoutStatus = $('dashboard-layout-status');
+const dashboardMobile = window.matchMedia('(max-width: 720px)');
+const dashboardCards = [...dashboardModules.children];
+const dashboardControls = new Map();
+let dashboardEditing = false;
+let draggedDashboardCard;
+
+function dashboardLayoutKey() {
+  return 'pfc-dashboard-layout-' + (dashboardMobile.matches ? 'mobile' : 'desktop');
+}
+
+function restoreDashboardLayout() {
+  let saved;
+  try {
+    saved = JSON.parse(localStorage.getItem(dashboardLayoutKey()));
+  } catch {
+    saved = null;
+  }
+  const order = new Set(Array.isArray(saved) ? saved.map(item => item?.id) : []);
+  for (const card of dashboardCards) order.add(card.dataset.dashboardModule);
+  for (const id of order) {
+    const card = dashboardCards.find(module => module.dataset.dashboardModule === id);
+    if (!card) continue;
+    const settings = Array.isArray(saved) ? saved.find(item => item?.id === id) : null;
+    const defaultWidth = !dashboardMobile.matches && id !== 'trend' ? 'half' : 'full';
+    card.dataset.width = ['half', 'full'].includes(settings?.width) ? settings.width : defaultWidth;
+    card.dataset.height = settings?.height === 'tall' ? 'tall' : 'normal';
+    dashboardModules.append(card);
+  }
+  refreshDashboardControls();
+}
+
+function saveDashboardLayout(message) {
+  const layout = [...dashboardModules.children].map(card => ({
+    id: card.dataset.dashboardModule,
+    width: card.dataset.width,
+    height: card.dataset.height
+  }));
+  try {
+    localStorage.setItem(dashboardLayoutKey(), JSON.stringify(layout));
+  } catch {
+    message += ' Раскладка сохранится только до закрытия страницы.';
+  }
+  dashboardLayoutStatus.textContent = message;
+  refreshDashboardControls();
+}
+
+function refreshDashboardControls() {
+  for (const [card, controls] of dashboardControls) {
+    controls.bar.hidden = !dashboardEditing;
+    controls.previous.disabled = !card.previousElementSibling;
+    controls.next.disabled = !card.nextElementSibling;
+    controls.width.textContent = card.dataset.width === 'half' ? 'На всю ширину' : 'На полширины';
+    controls.height.textContent = card.dataset.height === 'tall' ? 'Обычная высота' : 'Увеличить высоту';
+  }
+}
+
+function moveDashboardCard(card, target, after) {
+  if (after) target.after(card);
+  else target.before(card);
+  saveDashboardLayout('Модуль «' + card.querySelector('h2').textContent + '» перемещён.');
+}
+
+for (const card of dashboardCards) {
+  const bar = document.createElement('div');
+  bar.className = 'dashboard-module-tools';
+  const name = card.querySelector('h2').textContent;
+  bar.setAttribute('role', 'group');
+  bar.setAttribute('aria-label', 'Настройка модуля «' + name + '»');
+
+  const previous = document.createElement('button');
+  const next = document.createElement('button');
+  const width = document.createElement('button');
+  const height = document.createElement('button');
+  const handle = document.createElement('button');
+  for (const button of [previous, next, width, height, handle]) {
+    button.type = 'button';
+    button.className = 'secondary';
+    bar.append(button);
+  }
+  previous.textContent = '↑ Раньше';
+  next.textContent = '↓ Позже';
+  handle.textContent = 'Перетащить';
+  handle.draggable = true;
+  previous.onclick = () => {
+    if (card.previousElementSibling) moveDashboardCard(card, card.previousElementSibling, false);
+    (previous.disabled ? next : previous).focus();
+  };
+  next.onclick = () => {
+    if (card.nextElementSibling) moveDashboardCard(card, card.nextElementSibling, true);
+    (next.disabled ? previous : next).focus();
+  };
+  width.onclick = () => {
+    card.dataset.width = card.dataset.width === 'half' ? 'full' : 'half';
+    saveDashboardLayout('Ширина модуля изменена.');
+  };
+  height.onclick = () => {
+    card.dataset.height = card.dataset.height === 'tall' ? 'normal' : 'tall';
+    saveDashboardLayout('Высота модуля изменена.');
+  };
+  handle.addEventListener('dragstart', event => {
+    draggedDashboardCard = card;
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', name);
+  });
+  handle.addEventListener('dragend', () => {
+    draggedDashboardCard = undefined;
+    dashboardModules.querySelector('.drop-target')?.classList.remove('drop-target');
+  });
+  card.addEventListener('dragover', event => {
+    if (!draggedDashboardCard || draggedDashboardCard === card) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    card.classList.add('drop-target');
+  });
+  card.addEventListener('dragleave', event => {
+    if (!card.contains(event.relatedTarget)) card.classList.remove('drop-target');
+  });
+  card.addEventListener('drop', event => {
+    if (!draggedDashboardCard || draggedDashboardCard === card) return;
+    event.preventDefault();
+    card.classList.remove('drop-target');
+    const order = [...dashboardModules.children];
+    moveDashboardCard(draggedDashboardCard, card, order.indexOf(draggedDashboardCard) < order.indexOf(card));
+  });
+
+  card.prepend(bar);
+  dashboardControls.set(card, {bar, previous, next, width, height});
+}
+
+dashboardEdit.onclick = () => {
+  dashboardEditing = !dashboardEditing;
+  dashboardEdit.textContent = dashboardEditing ? 'Готово' : 'Настроить';
+  dashboardEdit.setAttribute('aria-pressed', String(dashboardEditing));
+  dashboardReset.hidden = !dashboardEditing;
+  dashboardModules.classList.toggle('is-editing', dashboardEditing);
+  refreshDashboardControls();
+};
+dashboardReset.onclick = () => {
+  try {
+    localStorage.removeItem(dashboardLayoutKey());
+  } catch {
+    // Reset the current view even when browser storage is unavailable.
+  }
+  restoreDashboardLayout();
+  dashboardLayoutStatus.textContent = 'Восстановлена стандартная раскладка.';
+};
+dashboardMobile.addEventListener('change', restoreDashboardLayout);
+restoreDashboardLayout();

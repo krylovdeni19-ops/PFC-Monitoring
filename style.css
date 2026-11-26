@@ -339,23 +339,6 @@ summary { cursor: pointer; font-weight: 650; }
 #dashboard .shipment-value { z-index: 2; min-height: 22px; }
 #dashboard .shipment-value::after { background: #fff; border-color: #355f8b; }
 
-#dashboard .dashboard-grid {
-  grid-template-columns: minmax(0, 1fr) minmax(0, .9fr);
-  grid-template-rows: auto 1fr;
-  grid-template-areas: "capacity ranking" "shipments ranking";
-  align-items: start;
-}
-.dashboard-capacity { grid-area: capacity; }
-.dashboard-ranking { grid-area: ranking; }
-.dashboard-shipments { grid-area: shipments; }
-@media (max-width: 720px) {
-  #dashboard .dashboard-grid {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto;
-    grid-template-areas: "capacity" "ranking" "shipments";
-  }
-}
-
 .shipment-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-block: 10px; }
 .shipment-kpis > div { min-width: 0; padding: 7px 9px; border-radius: 8px; background: var(--canvas); }
 .shipment-kpis dt { color: var(--muted); font-size: .75rem; }
@@ -525,4 +508,51 @@ summary { cursor: pointer; font-weight: 650; }
     font-size: .74rem;
     font-weight: 600;
   }
+}
+
+
+#dashboard-modules {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+#dashboard-modules > section {
+  min-width: 0;
+  min-height: var(--module-height, auto);
+  grid-column: span 2;
+  overflow-wrap: anywhere;
+}
+#dashboard-modules > [data-width="half"] { grid-column: span 1; }
+#dashboard-modules > [data-height="tall"] { --module-height: 270px; }
+#dashboard-modules > [data-height="tall"] .trend-plot { height: clamp(210px, 28vw, 340px); }
+.dashboard-module-tools {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.dashboard-module-tools button { padding-inline: 4px; }
+.dashboard-module-tools button:last-child {
+  grid-column: 1 / -1;
+  cursor: grab;
+}
+.dashboard-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+  overflow: hidden;
+}
+#dashboard-modules.is-editing > section { border-color: #87a4c0; }
+#dashboard-modules > section.drop-target { outline: 2px solid #3889cc; outline-offset: 2px; }
+@media (max-width: 720px) {
+  #dashboard-modules > [data-width="half"] h2 { font-size: 1rem; }
+  #dashboard-modules > [data-width="half"] .dashboard-heading strong { white-space: normal; }
+  #dashboard-modules > [data-width="half"] .shipment-kpis { grid-template-columns: 1fr; }
+  #dashboard-modules > [data-width="half"] .trend-axis span:nth-child(n+2):not(:last-child) { display: none; }
+  #dashboard-modules > [data-width="half"] .filters { display: grid; }
+  #dashboard-modules > [data-width="half"] select { width: 100%; }
+  .dashboard-module-tools button { font-size: .76rem; }
+  .dashboard-module-tools button:last-child { display: none; }
 }
