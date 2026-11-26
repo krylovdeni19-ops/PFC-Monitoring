@@ -330,3 +330,11 @@ summary { cursor: pointer; font-weight: 650; }
 #dashboard .trend-axis span { white-space: nowrap; }
 #trend-point-value, #shipment-point { margin-block: 3px 0; font-size: .87rem; }
 #trend-comparison { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; }
+
+.shipment-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 8px; color: var(--muted); font-size: .8rem; }
+.shipment-legend span::before { content: ""; display: inline-block; width: 11px; height: 8px; margin-right: 6px; border-radius: 2px; background: #7196bf; }
+.shipment-legend span + span::before { height: 3px; background: #9a4612; vertical-align: middle; }
+.shipment-column { position: absolute; bottom: 10%; transform: translateX(-50%); background: #7196bf; border-radius: 3px 3px 0 0; pointer-events: none; }
+.shipment-average { z-index: 1; background: #9a4612; }
+#dashboard .shipment-value { z-index: 2; min-height: 22px; }
+#dashboard .shipment-value::after { background: #fff; border-color: #355f8b; }

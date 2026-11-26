@@ -1301,6 +1301,7 @@ function renderShipmentChart({today, history, saved}) {
   const detail = $('shipment-point');
   const x = index => 14 + 83 * index / (days.length - 1);
   drawDashboardScale(plot, 0, max, new Intl.NumberFormat('ru-RU'));
+  const windowValues = [];
   let previous;
   let latest;
   for (const [index, day] of days.entries()) {
@@ -1312,21 +1313,35 @@ function renderShipmentChart({today, history, saved}) {
     }
     if (!Number.isFinite(day.value)) {
       previous = undefined;
+      windowValues.length = 0;
       continue;
     }
-    const point = {x: x(index), y: 90 - 80 * day.value / max};
+    const dailyY = 90 - 80 * day.value / max;
+    const column = document.createElement('span');
+    column.className = 'shipment-column';
+    column.style.left = x(index) + '%';
+    column.style.top = dailyY + '%';
+    column.style.width = Math.min(7, 62 / period) + '%';
+    column.setAttribute('aria-hidden', 'true');
+    plot.append(column);
+
+    windowValues.push(day.value);
+    if (windowValues.length > 7) windowValues.shift();
+    const average = windowValues.reduce((sum, value) => sum + value, 0) / windowValues.length;
+    const point = {x: x(index), y: 90 - 80 * average / max};
     if (previous) {
       const line = document.createElement('span');
-      line.className = 'trend-segment';
+      line.className = 'trend-segment shipment-average';
       line.style.clipPath = `polygon(${previous.x}% ${previous.y - .6}%, ${point.x}% ${point.y - .6}%, ${point.x}% ${point.y + .6}%, ${previous.x}% ${previous.y + .6}%)`;
       plot.append(line);
     }
     latest = day.label + ' · ' + day.value.toLocaleString('ru-RU') + ' шт.';
-    const label = latest;
+    const label = latest + ' · Среднее за ' + windowValues.length + ' дн.: ' +
+      average.toLocaleString('ru-RU', {maximumFractionDigits: 1}) + ' шт.';
     const dot = dashboardButton('', () => { detail.textContent = label; });
-    dot.className = 'trend-point';
+    dot.className = 'trend-point shipment-value';
     dot.style.left = point.x + '%';
-    dot.style.top = point.y + '%';
+    dot.style.top = dailyY + '%';
     dot.title = label;
     dot.setAttribute('aria-label', label);
     dot.addEventListener('focus', () => { detail.textContent = label; });
