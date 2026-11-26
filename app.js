@@ -1468,3 +1468,35 @@ function renderShipmentChart({today, history, saved}) {
 $('shipment-period').addEventListener('change', () => {
   if (shipmentHistory) renderShipmentChart(shipmentHistory);
 });
+
+function mobileReaderAddress(value) {
+  const url = new URL(value.trim());
+  if (url.origin !== 'https://script.google.com' ||
+      !/^\/macros\/s\/[\w-]+\/exec\/?$/.test(url.pathname) || url.username || url.password) {
+    throw new Error('Укажите ссылку /exec из проекта Apps Script чтения.');
+  }
+  url.hash = '';
+  url.search = '?mobile=1';
+  return url;
+}
+
+const mobileAccess = $('mobile-access');
+const mobileReaderInput = $('mobile-reader-url');
+const mobileDevice = window.matchMedia('(pointer: coarse) and (hover: none)');
+function showMobileAccess() {
+  mobileAccess.hidden = !mobileDevice.matches;
+}
+mobileDevice.addEventListener('change', showMobileAccess);
+showMobileAccess();
+mobileReaderInput.value = address.value;
+$('mobile-reader-form').addEventListener('submit', event => {
+  event.preventDefault();
+  try {
+    const url = mobileReaderAddress(mobileReaderInput.value);
+    localStorage.setItem('pfc-reader-url', url.origin + url.pathname);
+    address.value = url.origin + url.pathname;
+    location.assign(url.href);
+  } catch {
+    $('mobile-reader-status').textContent = 'Проверьте ссылку Apps Script чтения. Она должна заканчиваться на /exec.';
+  }
+});

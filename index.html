@@ -3,9 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#12243b">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./pfc-192.png">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=123">
-  <script src="app.js?v=123" defer></script>
+  <link rel="stylesheet" href="style.css?v=125">
+  <script src="app.js?v=125" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -22,6 +25,15 @@
     </div>
   </header>
   <main>
+    <section id="mobile-access" class="panel settings" hidden>
+      <h2>Остатки на телефоне</h2>
+      <form id="mobile-reader-form">
+        <label for="mobile-reader-url">Ссылка Apps Script чтения</label>
+        <input type="url" id="mobile-reader-url" placeholder="https://script.google.com/macros/s/…/exec" required>
+        <button type="submit">Открыть мобильные остатки</button>
+      </form>
+      <p id="mobile-reader-status" role="status"></p>
+    </section>
     <div id="stock-view" class="view">
     <section class="overview" aria-labelledby="title">
       <div class="overview-top">
