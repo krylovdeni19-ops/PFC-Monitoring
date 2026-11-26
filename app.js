@@ -69,6 +69,12 @@ function showStoreStock(key) {
   storeFilter.focus({preventScroll: true});
 }
 
+function labelMobileCells(row, labels) {
+  labels.forEach((label, index) => {
+    if (label) row.cells[index].dataset.mobileLabel = label;
+  });
+}
+
 function renderStoreSummary() {
   const groups = summarizeStores(rows);
   const format = new Intl.NumberFormat('ru-RU');
@@ -91,6 +97,7 @@ function renderStoreSummary() {
     for (const count of [group.locations.size, group.articles.size, group.units]) {
       tr.insertCell().textContent = format.format(count);
     }
+    labelMobileCells(tr, ['', 'МХ с товаром', 'Уникальных НМ', 'Всего штук']);
     body.append(tr);
   }
   $('store-summary-rows').replaceChildren(body);
@@ -444,6 +451,7 @@ function renderChanges(report) {
       list.append(line);
     }
     row.insertCell().append(list);
+    labelMobileCells(row, ['Баркод', '', 'Было', 'Стало', 'Разница']);
   }
 }
 
@@ -633,6 +641,7 @@ function openMapCell(address) {
     else article.textContent = row[5] || '—';
     tr.insertCell().textContent = storeName(row) || '—';
     tr.insertCell().textContent = format.format(Number(row[4]) || 0);
+    labelMobileCells(tr, ['', 'Баркод', 'Артикул WB', 'Магазин WB', 'Количество']);
     body.append(tr);
   }
   $('map-products').replaceChildren(body);
