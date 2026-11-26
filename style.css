@@ -360,3 +360,8 @@ summary { cursor: pointer; font-weight: 650; }
 .shipment-kpis > div { min-width: 0; padding: 7px 9px; border-radius: 8px; background: var(--canvas); }
 .shipment-kpis dt { color: var(--muted); font-size: .75rem; }
 .shipment-kpis dd { margin: 1px 0 0; font-size: .95rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.shipment-change { display: inline-block; margin-inline-start: .45em; font-size: .8em; white-space: nowrap; color: var(--muted); }
+.shipment-change-up { color: #216044; }
+.shipment-change-down { color: #942c35; }
+.shipment-coverage { display: block; color: var(--muted); font-size: .7rem; }

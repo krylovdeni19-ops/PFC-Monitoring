@@ -1287,24 +1287,57 @@ function shipmentPeriodTotals(days) {
   return {covered, total, peak};
 }
 
-function renderShipmentTotals(days) {
+function shipmentPeriodChange(current, previous, format) {
+  if (current === undefined || previous === undefined || (previous === 0 && current !== 0)) {
+    return {text: '—', tone: 'neutral'};
+  }
+  const delta = previous ? 100 * (current - previous) / previous : 0;
+  const rounded = Math.round(Math.abs(delta) * 10) / 10;
+  if (!rounded) return {text: '0%', tone: 'neutral'};
+  return {text: (delta > 0 ? '↑ ' : '↓ ') + format.format(rounded) + '%',
+    tone: delta > 0 ? 'up' : 'down'};
+}
+
+function renderShipmentTotals(days, previousDays) {
   const {covered, total, peak} = shipmentPeriodTotals(days);
   const format = new Intl.NumberFormat('ru-RU', {maximumFractionDigits: 1});
+  const previous = shipmentPeriodTotals(previousDays);
+  const incomplete = covered < days.length || previous.covered < previousDays.length;
+  const coverage = 'Дней с данными: ' + covered + ' из ' + days.length +
+    ' в текущем периоде, ' + previous.covered + ' из ' + previousDays.length + ' в предыдущем.';
+  const compare = (current, prior) => shipmentPeriodChange(
+    covered ? current : undefined, previous.covered ? prior : undefined, format);
   const units = value => format.format(value) + ' шт.';
   const totals = $('shipment-totals');
   const metrics = [
-    ['Всего за период', covered ? units(total) : '—'],
-    ['Среднее за день с данными', covered ? units(total / covered) : '—'],
+    ['Всего за период', covered ? units(total) : '—', compare(total, previous.total)],
+    ['Среднее за день с данными', covered ? units(total / covered) : '—',
+      compare(total / covered, previous.total / previous.covered)],
     ['Пик отгрузок', peak ? peak.label + ' · ' + units(peak.value) : '—'],
     ['Дней с данными', covered + ' из ' + days.length]
   ];
-  totals.replaceChildren(...metrics.map(([name, value]) => {
+  totals.replaceChildren(...metrics.map(([name, value, change]) => {
     const card = document.createElement('div');
     const label = document.createElement('dt');
     const number = document.createElement('dd');
     label.textContent = name;
     number.textContent = value;
     card.append(label, number);
+    if (change) {
+      const badge = document.createElement('span');
+      badge.className = 'shipment-change shipment-change-' + change.tone;
+      badge.textContent = change.text;
+      badge.title = 'К предыдущим ' + days.length + ' дням. ' + coverage;
+      badge.setAttribute('aria-label', badge.title + ' ' + change.text);
+      number.append(badge);
+      if (incomplete) {
+        const note = document.createElement('small');
+        note.className = 'shipment-coverage';
+        note.textContent = 'Неполные данные';
+        note.title = coverage;
+        card.append(note);
+      }
+    }
     return card;
   }));
   totals.hidden = false;
@@ -1319,14 +1352,15 @@ function renderShipmentChart({today, history, saved}) {
   const [day, month, year] = today.split('.').map(Number);
   const end = Date.UTC(year, month - 1, day);
   const period = Number($('shipment-period').value);
-  const days = Array.from({length: period}, (_, index) => {
-    const date = new Date(end - (period - 1 - index) * 86400000);
+  const periodDays = offset => Array.from({length: period}, (_, index) => {
+    const date = new Date(end - (offset + period - 1 - index) * 86400000);
     const d = date.getUTCDate();
     const m = date.getUTCMonth() + 1;
     return {label: d + '.' + String(m).padStart(2, '0'),
       value: history[[d, m, date.getUTCFullYear()].join('.')]?.prepared};
   });
-  renderShipmentTotals(days);
+  const days = periodDays(0);
+  renderShipmentTotals(days, periodDays(period));
   const max = Math.max(1, ...days.map(day => day.value ?? 0));
   status.textContent = 'Последние ' + period + ' дней по МСК · штуки · ' + (saved ? 'Google Таблица' : 'загруженные строки WB');
   const plot = document.createElement('div');
