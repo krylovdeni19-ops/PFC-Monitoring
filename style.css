@@ -517,13 +517,10 @@ summary { cursor: pointer; font-weight: 650; }
 }
 #dashboard-modules > section {
   min-width: 0;
-  min-height: var(--module-height, auto);
   grid-column: span 2;
   overflow-wrap: anywhere;
 }
 #dashboard-modules > [data-width="half"] { grid-column: span 1; }
-#dashboard-modules > [data-height="tall"] { --module-height: 270px; }
-#dashboard-modules > [data-height="tall"] .trend-plot { height: clamp(210px, 28vw, 340px); }
 .dashboard-module-tools {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -555,4 +552,20 @@ summary { cursor: pointer; font-weight: 650; }
   #dashboard-modules > [data-width="half"] select { width: 100%; }
   .dashboard-module-tools button { font-size: .76rem; }
   .dashboard-module-tools button:last-child { display: none; }
+}
+
+#dashboard-modules > section { --dashboard-chart-height: 185px; --dashboard-row-space: 7px; }
+#dashboard-modules > [data-height="compact"] { --dashboard-chart-height: 126px; --dashboard-row-space: 3px; }
+#dashboard-modules > [data-height="tall"] { --dashboard-chart-height: 250px; --dashboard-row-space: 12px; }
+#dashboard-modules > [data-height="extra"] { --dashboard-chart-height: 330px; --dashboard-row-space: 18px; }
+#dashboard #dashboard-modules .trend-plot { height: var(--dashboard-chart-height); }
+#dashboard #dashboard-modules .dashboard-line { margin-block: var(--dashboard-row-space); }
+.dashboard-module-tools select { width: 100%; min-width: 0; }
+@media (min-width: 721px) {
+  #dashboard-modules { grid-auto-rows: 2px; row-gap: 0; }
+}
+@media (max-width: 720px) {
+  #dashboard-modules { grid-template-columns: minmax(0, 1fr); }
+  #dashboard-modules > section, #dashboard-modules > [data-width="half"] { grid-column: 1; }
+  .dashboard-module-tools > button:nth-child(3) { display: none; }
 }

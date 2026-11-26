@@ -1584,6 +1584,22 @@ const dashboardCards = [...dashboardModules.children];
 const dashboardControls = new Map();
 let dashboardEditing = false;
 let draggedDashboardCard;
+const dashboardHeights = [['compact', 'Компактный'], ['normal', 'Обычный'],
+  ['tall', 'Большой'], ['extra', 'Очень большой']];
+
+function fitDashboardCard(card) {
+  const height = card.getBoundingClientRect().height;
+  if (!height || dashboardMobile.matches) {
+    card.style.removeProperty('grid-row-end');
+    return;
+  }
+  card.style.gridRowEnd = 'span ' + Math.ceil((height + 14) / 2);
+}
+
+const dashboardResize = new ResizeObserver(entries => {
+  for (const {target} of entries) fitDashboardCard(target);
+});
+for (const card of dashboardCards) dashboardResize.observe(card);
 
 function dashboardLayoutKey() {
   return 'pfc-dashboard-layout-' + (dashboardMobile.matches ? 'mobile' : 'desktop');
@@ -1604,7 +1620,7 @@ function restoreDashboardLayout() {
     const settings = Array.isArray(saved) ? saved.find(item => item?.id === id) : null;
     const defaultWidth = !dashboardMobile.matches && id !== 'trend' ? 'half' : 'full';
     card.dataset.width = ['half', 'full'].includes(settings?.width) ? settings.width : defaultWidth;
-    card.dataset.height = settings?.height === 'tall' ? 'tall' : 'normal';
+    card.dataset.height = dashboardHeights.some(([key]) => key === settings?.height) ? settings.height : 'normal';
     dashboardModules.append(card);
   }
   refreshDashboardControls();
@@ -1631,7 +1647,7 @@ function refreshDashboardControls() {
     controls.previous.disabled = !card.previousElementSibling;
     controls.next.disabled = !card.nextElementSibling;
     controls.width.textContent = card.dataset.width === 'half' ? 'На всю ширину' : 'На полширины';
-    controls.height.textContent = card.dataset.height === 'tall' ? 'Обычная высота' : 'Увеличить высоту';
+    controls.height.value = card.dataset.height;
   }
 }
 
@@ -1651,13 +1667,16 @@ for (const card of dashboardCards) {
   const previous = document.createElement('button');
   const next = document.createElement('button');
   const width = document.createElement('button');
-  const height = document.createElement('button');
+  const height = document.createElement('select');
   const handle = document.createElement('button');
-  for (const button of [previous, next, width, height, handle]) {
+  for (const button of [previous, next, width, handle]) {
     button.type = 'button';
     button.className = 'secondary';
     bar.append(button);
   }
+  height.setAttribute('aria-label', 'Размер: ' + name);
+  height.replaceChildren(...dashboardHeights.map(([value, label]) => new Option(label, value)));
+  handle.before(height);
   previous.textContent = '↑ Раньше';
   next.textContent = '↓ Позже';
   handle.textContent = 'Перетащить';
@@ -1674,8 +1693,8 @@ for (const card of dashboardCards) {
     card.dataset.width = card.dataset.width === 'half' ? 'full' : 'half';
     saveDashboardLayout('Ширина модуля изменена.');
   };
-  height.onclick = () => {
-    card.dataset.height = card.dataset.height === 'tall' ? 'normal' : 'tall';
+  height.onchange = () => {
+    card.dataset.height = height.value;
     saveDashboardLayout('Высота модуля изменена.');
   };
   handle.addEventListener('dragstart', event => {
