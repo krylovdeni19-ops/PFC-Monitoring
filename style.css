@@ -296,3 +296,4 @@ summary { cursor: pointer; font-weight: 650; }
 .shipment-chart > div { min-width: 0; overflow-wrap: anywhere; font-size: clamp(.75rem, 1.6vw, .95rem); }
 .shipment-track { height: 135px; display: flex; align-items: end; justify-content: center; border-bottom: 1px solid var(--line); margin-bottom: 5px; }
 .shipment-track span { width: min(72%, 62px); background: #34658c; border-radius: 6px 6px 0 0; }
+.shipment-chart { overflow-x: auto; }

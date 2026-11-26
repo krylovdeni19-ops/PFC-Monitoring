@@ -1187,11 +1187,12 @@ $('seller-all').addEventListener('click', async event => {
 const transactionsButton = $('transactions-refresh');
 const transactionsStatus = $('transactions-status');
 let transactionsTimeout;
+let shipmentHistory;
 function refreshTransactions() {
   if (transactionsButton.disabled) return;
   $('transactions-prepared').textContent = '—';
   if (document.documentElement.dataset.pfcTransactions !== 'ready') {
-    transactionsStatus.textContent = 'Обновите расширение ПФЦ до 0.11.4 и перезагрузите страницу.';
+    transactionsStatus.textContent = 'Обновите расширение ПФЦ до 0.11.5 и перезагрузите страницу.';
     return;
   }
   transactionsButton.disabled = true;
@@ -1199,8 +1200,8 @@ function refreshTransactions() {
   transactionsTimeout = setTimeout(() => {
     transactionsStatus.textContent = 'Расширение не ответило. Повторите чтение.';
     transactionsButton.disabled = false;
-  }, 24000);
-  sendWarehouse('pfc:transactions');
+  }, 60000);
+  sendWarehouse('pfc:transactions', {writer: writer.value.trim()});
 }
 
 transactionsButton.addEventListener('click', refreshTransactions);
@@ -1214,13 +1215,20 @@ window.addEventListener('pfc:transactions-result', ({detail}) => {
     transactionsStatus.textContent = detail?.error || 'Не удалось прочитать транзакции.';
     return;
   }
-  const {date, totals, today, history} = detail.data;
-  renderShipmentChart(today, history);
-  const prepared = totals.prepared;
+  const {totals, history, saved, wbError, sheetError} = detail.data;
+  const now = new Intl.DateTimeFormat('ru-RU', {
+    day: 'numeric', month: 'numeric', year: 'numeric', timeZone: 'Europe/Moscow'
+  }).formatToParts(new Date());
+  const today = now.filter(part => ['day', 'month', 'year'].includes(part.type))
+    .map(part => Number(part.value)).join('.');
+  shipmentHistory = {today, history: saved ?? history ?? {}, saved: Boolean(saved)};
+  renderShipmentChart(shipmentHistory);
+  const prepared = saved?.[today]?.prepared ?? totals?.prepared;
   $('transactions-prepared').textContent = Number.isFinite(prepared)
     ? prepared.toLocaleString('ru-RU') + ' шт.' : '—';
-  transactionsStatus.textContent = date + ' · ПФЦ 399276 · ' + (Number.isFinite(prepared)
-    ? 'По загруженным строкам WB' : 'В загруженных строках WB нет подготовки к отгрузке.');
+  transactionsStatus.textContent = [wbError, sheetError && 'Google Таблица: ' + sheetError,
+    Number.isFinite(prepared) ? (saved ? 'Данные из Google Таблицы' : 'По загруженным строкам WB') : 'Итог за сегодня отсутствует.']
+    .filter(Boolean).join(' · ');
 });
 
 const transactionsRoot = document.documentElement;
@@ -1236,28 +1244,30 @@ if (transactionsRoot.dataset.pfcTransactions === 'ready') {
   });
   const readyTimeout = setTimeout(() => {
     ready.disconnect();
-    transactionsStatus.textContent = 'Расширение для транзакций не подключилось. Проверьте версию 0.11.4 и обновите страницу.';
+    transactionsStatus.textContent = 'Расширение для транзакций не подключилось. Проверьте версию 0.11.5 и обновите страницу.';
   }, 8000);
   ready.observe(transactionsRoot, {attributes: true, attributeFilter: ['data-pfc-transactions']});
 }
 
-function renderShipmentChart(today, history) {
+function renderShipmentChart({today, history, saved}) {
   const status = $('shipment-status');
   if (!today || !history) {
-    status.textContent = 'Для графика обновите расширение до 0.11.4.';
+    status.textContent = 'Для графика обновите расширение до 0.11.5.';
     return;
   }
   const [day, month, year] = today.split('.').map(Number);
   const end = Date.UTC(year, month - 1, day);
-  const days = Array.from({length: 7}, (_, index) => {
-    const date = new Date(end - (6 - index) * 86400000);
+  const period = Number($('shipment-period').value);
+  const days = Array.from({length: period}, (_, index) => {
+    const date = new Date(end - (period - 1 - index) * 86400000);
     const d = date.getUTCDate();
     const m = date.getUTCMonth() + 1;
     return {label: d + '.' + String(m).padStart(2, '0'),
       value: history[[d, m, date.getUTCFullYear()].join('.')]?.prepared};
   });
   const max = Math.max(1, ...days.map(day => day.value ?? 0));
-  status.textContent = 'Последние 7 дней по МСК · штуки · по загруженным строкам WB';
+  status.textContent = 'Последние ' + period + ' дней по МСК · штуки · ' + (saved ? 'Google Таблица' : 'загруженные строки WB');
+  $('shipment-chart').style.gridTemplateColumns = 'repeat(' + period + ', minmax(30px, 1fr))';
   $('shipment-chart').replaceChildren(...days.map(day => {
     const item = document.createElement('div');
     const value = document.createElement('strong');
@@ -1275,3 +1285,7 @@ function renderShipmentChart(today, history) {
   }));
   if (days.some(day => day.value == null)) status.textContent += ' · тире — нет данных';
 }
+
+$('shipment-period').addEventListener('change', () => {
+  if (shipmentHistory) renderShipmentChart(shipmentHistory);
+});
