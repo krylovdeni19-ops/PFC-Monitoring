@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=113">
-  <script src="app.js?v=113" defer></script>
+  <link rel="stylesheet" href="style.css?v=114">
+  <script src="app.js?v=114" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -130,6 +130,11 @@
           <a href="#store-summary">Все магазины</a>
         </section>
       </div>
+      <section class="panel dashboard-panel dashboard-trend">
+        <h2>Подготовлено к отгрузке по дням</h2>
+        <p id="shipment-status" role="status">Данные появятся после чтения транзакций WB.</p>
+        <div id="shipment-chart" class="shipment-chart"></div>
+      </section>
       <section class="panel dashboard-panel dashboard-trend">
         <div class="dashboard-heading">
           <h2>Динамика остатков</h2>

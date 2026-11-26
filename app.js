@@ -1191,7 +1191,7 @@ function refreshTransactions() {
   if (transactionsButton.disabled) return;
   $('transactions-prepared').textContent = '—';
   if (document.documentElement.dataset.pfcTransactions !== 'ready') {
-    transactionsStatus.textContent = 'Обновите расширение ПФЦ до 0.11.3 и перезагрузите страницу.';
+    transactionsStatus.textContent = 'Обновите расширение ПФЦ до 0.11.4 и перезагрузите страницу.';
     return;
   }
   transactionsButton.disabled = true;
@@ -1214,7 +1214,8 @@ window.addEventListener('pfc:transactions-result', ({detail}) => {
     transactionsStatus.textContent = detail?.error || 'Не удалось прочитать транзакции.';
     return;
   }
-  const {date, totals} = detail.data;
+  const {date, totals, today, history} = detail.data;
+  renderShipmentChart(today, history);
   const prepared = totals.prepared;
   $('transactions-prepared').textContent = Number.isFinite(prepared)
     ? prepared.toLocaleString('ru-RU') + ' шт.' : '—';
@@ -1235,7 +1236,42 @@ if (transactionsRoot.dataset.pfcTransactions === 'ready') {
   });
   const readyTimeout = setTimeout(() => {
     ready.disconnect();
-    transactionsStatus.textContent = 'Расширение для транзакций не подключилось. Проверьте версию 0.11.3 и обновите страницу.';
+    transactionsStatus.textContent = 'Расширение для транзакций не подключилось. Проверьте версию 0.11.4 и обновите страницу.';
   }, 8000);
   ready.observe(transactionsRoot, {attributes: true, attributeFilter: ['data-pfc-transactions']});
+}
+
+function renderShipmentChart(today, history) {
+  const status = $('shipment-status');
+  if (!today || !history) {
+    status.textContent = 'Для графика обновите расширение до 0.11.4.';
+    return;
+  }
+  const [day, month, year] = today.split('.').map(Number);
+  const end = Date.UTC(year, month - 1, day);
+  const days = Array.from({length: 7}, (_, index) => {
+    const date = new Date(end - (6 - index) * 86400000);
+    const d = date.getUTCDate();
+    const m = date.getUTCMonth() + 1;
+    return {label: d + '.' + String(m).padStart(2, '0'),
+      value: history[[d, m, date.getUTCFullYear()].join('.')]?.prepared};
+  });
+  const max = Math.max(1, ...days.map(day => day.value ?? 0));
+  status.textContent = 'Последние 7 дней по МСК · штуки · по загруженным строкам WB';
+  $('shipment-chart').replaceChildren(...days.map(day => {
+    const item = document.createElement('div');
+    const value = document.createElement('strong');
+    value.textContent = day.value == null ? '—' : day.value.toLocaleString('ru-RU');
+    const track = document.createElement('div');
+    track.className = 'shipment-track';
+    track.setAttribute('aria-hidden', 'true');
+    const bar = document.createElement('span');
+    bar.style.height = (100 * (day.value ?? 0) / max) + '%';
+    track.append(bar);
+    const label = document.createElement('span');
+    label.textContent = day.label;
+    item.append(value, track, label);
+    return item;
+  }));
+  if (days.some(day => day.value == null)) status.textContent += ' · тире — нет данных';
 }
