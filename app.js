@@ -2011,7 +2011,7 @@ function renderDemandRanking() {
   const ranking = $('demand-ranking');
   ranking.replaceChildren();
   $('demand-status').textContent = intervals.length
-    ? 'Сопоставлено ' + intervals.length + ' из ' + period + ' суток · по частоте снижения остатков'
+    ? 'Сопоставлено ' + intervals.length + ' из ' + period + ' суток · среднее за все сопоставленные сутки'
     : 'Нужны полные обходы за соседние дни.';
   const stores = rankStoreDemand(intervals);
   const toggle = $('demand-more');
@@ -2019,30 +2019,19 @@ function renderDemandRanking() {
   toggle.hidden = stores.length <= 5;
   toggle.textContent = expanded ? 'Свернуть до топ‑5' : 'Показать топ‑' + stores.length;
   for (const [index, store] of stores.entries()) {
-    const row = document.createElement('li');
+    const row = ranking.insertRow();
     row.hidden = !expanded && index >= 5;
     const top = store.top;
-    const heading = dashboardButton(store.name, () => openStoreDetails('store:' + store.name, store.name));
-    const totals = document.createElement('small');
-    totals.textContent = store.intervals.size + ' из ' + intervals.length + ' сут. · ' + storeNumber.format(store.units) + ' шт.';
-    const product = document.createElement('p');
+    row.insertCell().append(dashboardButton(store.name, () => openStoreDetails('store:' + store.name, store.name)));
+    const product = row.insertCell();
     product.textContent = top.name;
-    const detail = document.createElement('small');
-    detail.textContent = 'НМ ' + top.article + ' · ' + top.intervals.size + ' сут. · ' + storeNumber.format(top.units) + ' шт.';
-    const summary = document.createElement('div');
-    summary.className = 'demand-store';
-    summary.append(heading, totals);
-    const bar = document.createElement('div');
-    bar.className = 'demand-bar';
-    bar.setAttribute('aria-hidden', 'true');
-    bar.style.setProperty('--share', 100 * store.intervals.size / intervals.length + '%');
-    summary.append(bar);
-    const leader = document.createElement('div');
-    leader.className = 'demand-product';
-    leader.append(product, detail);
-    row.append(summary, leader);
-    ranking.append(row);
+    const article = document.createElement('small');
+    article.textContent = 'НМ ' + top.article;
+    product.append(article);
+    row.insertCell().textContent = storeNumber.format(top.units);
+    row.insertCell().textContent = storeNumber.format(top.units / intervals.length);
   }
+  ranking.closest('table').hidden = !stores.length;
   if (intervals.length && !ranking.children.length) {
     $('demand-status').textContent += ' · Снижения по известным магазинам нет.';
   }

@@ -7,9 +7,9 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./pfc-192.png">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=1.0.6-4">
+  <link rel="stylesheet" href="style.css?v=1.0.6-5">
   <script src="stock-xlsx.js?v=1.0.6" defer></script>
-  <script src="app.js?v=1.0.6-4" defer></script>
+  <script src="app.js?v=1.0.6-5" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -169,8 +169,10 @@
             <label>Период <select id="demand-period"><option value="7">7 дней</option><option value="30">30 дней</option></select></label>
           </div>
           <p id="demand-status" role="status">Загрузите сохранённые остатки.</p>
-          <div class="demand-labels" aria-hidden="true"><span>Магазин</span><span>Товар-лидер</span></div>
-          <ol id="demand-ranking" class="demand-ranking"></ol>
+          <table class="demand-table" aria-label="Товары-лидеры по магазинам">
+            <thead><tr><th scope="col">Магазин</th><th scope="col">Товар (НМ)</th><th scope="col">Количество, шт.</th><th scope="col">Среднее, шт./сутки</th></tr></thead>
+            <tbody id="demand-ranking"></tbody>
+          </table>
           <button id="demand-more" class="secondary" type="button" aria-controls="demand-ranking" aria-expanded="false" hidden></button>
         </section>
       <section class="panel dashboard-panel dashboard-trend dashboard-shipments" data-dashboard-module="shipments">

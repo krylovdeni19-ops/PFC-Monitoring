@@ -608,20 +608,12 @@ summary { cursor: pointer; font-weight: 650; }
 }
 
 
-.demand-ranking { margin: 0; padding-inline-start: 22px; }
-.demand-ranking li { padding: 8px 5px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
-.demand-ranking li::marker { color: #475569; font-weight: 700; }
-.demand-ranking small { display: block; color: #475569; font-variant-numeric: tabular-nums; }
-.demand-ranking p { margin: 0; font-weight: 600; }
-.demand-store, .demand-product { display: inline-block; vertical-align: top; }
-.demand-store { width: 42%; padding-inline-end: 12px; }
-.demand-product { width: 58%; }
-.demand-labels { display: grid; grid-template-columns: 42% 58%; padding: 5px 5px 5px 27px; background: #eef3f8; border-radius: 7px; color: #475569; font-size: .8rem; font-weight: 700; }
-.demand-labels:has(+ ol:empty) { display: none; }
-.demand-bar { height: 4px; margin-top: 5px; border-radius: 8px; background: linear-gradient(to right, #437aa1 var(--share), #e6edf3 var(--share)); }
+
+.demand-table { min-width: 0; table-layout: fixed; }
+.demand-table :is(th, td) { padding: 7px 5px; font-size: .85rem; overflow-wrap: anywhere; line-height: 1.3; }
+.demand-table :is(th, td):nth-child(1) { width: 26%; text-align: left; }
+.demand-table :is(th, td):nth-child(2) { width: 39%; text-align: left; }
+.demand-table :is(th, td):nth-child(n+3) { width: 17.5%; text-align: right; font-variant-numeric: tabular-nums; }
+.demand-table small { display: block; color: #475569; }
+.demand-table button { text-align: left; min-height: 0; padding: 0; }
 #demand-more { margin-top: 8px; }
-@media (max-width: 480px) {
-  .demand-store, .demand-product { display: block; width: 100%; }
-  .demand-product { margin-top: 5px; }
-  .demand-labels { display: none; }
-}
