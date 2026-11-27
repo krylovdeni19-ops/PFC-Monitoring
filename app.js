@@ -1271,7 +1271,7 @@ function refreshTransactions() {
   if (transactionsButton.disabled) return;
   $('transactions-prepared').textContent = '—';
   if (document.documentElement.dataset.pfcTransactions !== 'ready') {
-    transactionsStatus.textContent = 'Обновите расширение ПФЦ до 0.11.5 и перезагрузите страницу.';
+    transactionsStatus.textContent = 'Обновите расширение ПФЦ до 1.0.0 и перезагрузите страницу.';
     return;
   }
   transactionsButton.disabled = true;
@@ -1402,7 +1402,7 @@ function renderShipmentTotals(days, previousDays) {
 function renderShipmentChart({today, history, saved}) {
   const status = $('shipment-status');
   if (!today || !history) {
-    status.textContent = 'Для графика обновите расширение до 0.11.5.';
+    status.textContent = 'Для графика обновите расширение до 1.0.0.';
     return;
   }
   const [day, month, year] = today.split('.').map(Number);
@@ -1530,12 +1530,16 @@ mobileForm.addEventListener('submit', event => {
   address.value = url.origin + url.pathname;
   try { localStorage.setItem('pfc-reader-url', address.value); } catch {}
   mobileStatus.textContent = 'Войдите в открывшемся окне Google. Данные появятся здесь.';
+  const expires = Date.now() + 120000;
   const timeout = setInterval(() => {
-    if (!popup.closed) return;
+    const expired = Date.now() >= expires;
+    if (!popup.closed && !expired) return;
     clearInterval(timeout);
     pendingMobileRead = undefined;
     button.disabled = false;
-    mobileStatus.textContent = 'Окно Google закрыто. Для загрузки нажмите кнопку ещё раз.';
+    mobileStatus.textContent = expired
+      ? 'Google не передал данные за 2 минуты. Закройте окно входа и повторите загрузку.'
+      : 'Окно Google закрыто. Для загрузки нажмите кнопку ещё раз.';
   }, 750);
   pendingMobileRead = {nonce, popup, timeout, button};
 });
@@ -1623,6 +1627,7 @@ function restoreDashboardLayout() {
     card.dataset.height = dashboardHeights.some(([key]) => key === settings?.height) ? settings.height : 'normal';
     dashboardModules.append(card);
   }
+  requestAnimationFrame(() => dashboardCards.forEach(fitDashboardCard));
   refreshDashboardControls();
 }
 
