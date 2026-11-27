@@ -7,8 +7,9 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./pfc-192.png">
   <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=1.0.0">
-  <script src="app.js?v=1.0.0" defer></script>
+  <link rel="stylesheet" href="style.css?v=1.0.3">
+  <script src="stock-xlsx.js?v=1.0.6" defer></script>
+  <script src="app.js?v=1.0.6" defer></script>
 </head>
 <body>
   <header class="topbar">
@@ -87,6 +88,7 @@
           <label>Состояние МХ
             <select id="stock-filter"><option value="">Все МХ</option><option value="С товаром">С товаром</option><option value="Ничего не найдено">Пустые</option></select>
           </label>
+          <button id="export-store-stock" type="button" class="secondary" hidden>Скачать Excel</button>
         </div>
       </div>
       <div class="table" tabindex="0" role="region" aria-label="Таблица остатков">
@@ -208,6 +210,19 @@
           <tbody id="store-summary-rows"></tbody>
         </table>
       </div>
+      <section class="panel dashboard-panel" aria-labelledby="replenishment-title">
+        <h2 id="replenishment-title">К пополнению</h2>
+        <div class="filters">
+          <label>Магазин WB <select id="replenishment-store"></select></label>
+          <label>Целевой запас, дней <input id="replenishment-target" type="number" min="1" max="90" step="1" value="10"></label>
+          <button class="secondary" type="button" id="replenishment-export" disabled>Скачать Excel</button>
+        </div>
+        <p id="replenishment-status" role="status">Загрузите сохранённые остатки.</p>
+        <div class="table" id="replenishment-table" hidden><table>
+          <thead><tr><th>НМ</th><th>Товар</th><th>Остаток, шт.</th><th>Расход, шт./сутки</th><th>Учтено дней</th><th>Запас, дней</th><th>Довезти, шт.</th><th>Оценка</th></tr></thead>
+          <tbody id="replenishment-rows"></tbody>
+        </table></div>
+      </section>
     </section>
 
     <section id="warehouse-map" class="view" hidden aria-labelledby="map-title">
@@ -259,18 +274,27 @@
           <label for="writer">Ссылка /exec для записи обходов</label>
           <input id="writer" type="url" placeholder="Прежняя ссылка записи">
           <label for="scan-zone">Зона обхода</label>
-          <select id="scan-zone"><option value="standard">Прежний обход · 136 МХ</option><option value="warehouse">Все активные МХ</option><option value="racks">Активные стеллажные МХ</option><option value="pallets">Активные паллетные МХ</option><option value="custom">Указать МХ</option></select>
+          <select id="scan-zone"><option value="warehouse">Все активные МХ</option><option value="racks">Активные стеллажные МХ</option><option value="pallets">Активные паллетные МХ</option><option value="custom">Указать МХ</option></select>
           <label for="scan-addresses">Список МХ для выборочного обхода</label>
           <textarea id="scan-addresses" rows="3" placeholder="02.01.01"></textarea>
           <label class="scan-parallel"><input type="checkbox" id="scan-parallel"> Обход на двух вкладках WB</label>
+          <label class="scan-parallel"><input type="checkbox" id="schedule-enabled"> Автообход всех активных МХ в 07:00 и 22:00 МСК</label>
+          <button class="secondary" type="button" id="schedule-save">Сохранить расписание</button>
+          <p id="schedule-status" role="status"></p>
         </details>
         <details>
           <summary>Справочник МХ</summary>
           <form id="locations-form">
-            <label>Способ ввода <select id="location-mode"><option value="single">Один МХ</option><option value="rack">Стеллаж</option><option value="pallets">Паллетный диапазон</option></select></label>
+            <label>Способ ввода <select id="location-mode"><option value="single">Один МХ</option><option value="rack">Стеллаж</option><option value="racks">Диапазон стеллажей</option><option value="pallets">Паллетный диапазон</option></select></label>
             <label data-location-mode="single">Адрес <input id="location-single" placeholder="11.01.01"></label>
             <div data-location-mode="rack" class="form-row" hidden>
-              <label>Стеллаж <input id="location-rack" type="number" min="2" max="99" value="11"></label>
+              <label>Стеллаж <input id="location-rack" type="number" min="2" max="999" value="11"></label>
+            </div>
+            <div data-location-mode="racks" class="form-row" hidden>
+              <label>От стеллажа <input id="location-rackFirst" type="number" min="2" max="999" value="50"></label>
+              <label>До стеллажа <input id="location-rackLast" type="number" min="2" max="999" value="150"></label>
+            </div>
+            <div data-location-mode="rack racks" class="form-row" hidden>
               <label>Полок <input id="location-shelves" type="number" min="1" max="99" value="5"></label>
               <label>Ячеек на полку <input id="location-cells" type="number" min="1" max="99" value="3"></label>
             </div>
@@ -299,6 +323,24 @@
       </div>
     </section>
   </main>
+  <dialog id="store-details" aria-labelledby="store-details-title">
+    <header class="store-detail-head">
+      <div><h2 id="store-details-title"></h2><p>Снижение остатков по полным обходам · МСК</p></div>
+      <form method="dialog"><button class="secondary">Закрыть</button></form>
+    </header>
+    <div class="store-detail-actions">
+      <button type="button" class="secondary" id="store-detail-stock">Открыть остатки</button>
+      <button type="button" class="secondary" id="store-detail-export">Скачать Excel</button>
+      <label>Период <select id="store-detail-period"><option value="7">7 дней</option><option value="30">30 дней</option></select></label>
+    </div>
+    <p id="store-detail-status" role="status"></p>
+    <div id="store-detail-chart" class="store-detail-chart" aria-label="Снижение остатков по дням"></div>
+    <h3 id="store-detail-date" aria-live="polite"></h3>
+    <div id="store-detail-table" class="table" hidden><table>
+      <thead><tr><th>Товар</th><th>БК</th><th>НМ</th><th>Было</th><th>Стало</th><th>Снижение</th></tr></thead>
+      <tbody id="store-detail-items"></tbody>
+    </table></div>
+  </dialog>
   <dialog id="seller-details" aria-labelledby="seller-title">
     <form method="dialog"><button class="secondary">Закрыть</button></form>
     <h2 id="seller-title">Продавец на Wildberries</h2>

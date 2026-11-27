@@ -5,6 +5,13 @@ const search = $('search');
 let rows = [];
 const stockFilter = $('stock-filter');
 const storeFilter = $('store-filter');
+const exportStoreStock = $('export-store-stock');
+exportStoreStock.addEventListener('click', () => {
+  const key = storeFilter.value;
+  if (!key.startsWith('store:')) return;
+  const stock = rows.filter(row => row[1] === 'С товаром' && storeKey(row) === key);
+  if (stock.length) window.downloadStockXlsx(stock, storeName(stock[0]));
+});
 address.value = localStorage.getItem('pfc-reader-url') || '';
 $('read-settings').open = !address.value;
 $('connect').onsubmit = event => {
@@ -77,6 +84,15 @@ function labelMobileCells(row, labels) {
 
 function renderStoreSummary() {
   const groups = summarizeStores(rows);
+  const keys = new Set(groups.map(group => group.key));
+  for (const {items} of storeDeclines) {
+    for (const [name] of items) {
+      const key = 'store:' + name;
+      if (keys.has(key)) continue;
+      keys.add(key);
+      groups.push({key, name, locations: new Set(), articles: new Set(), units: 0});
+    }
+  }
   const format = new Intl.NumberFormat('ru-RU');
   $('store-summary-status').textContent = groups.length
     ? 'Магазинов: ' + format.format(groups.filter(group => group.key !== unknownStore).length) +
@@ -91,7 +107,8 @@ function renderStoreSummary() {
     button.className = 'stock-map-link';
     button.textContent = group.name;
     button.addEventListener('click', () => {
-      showStoreStock(group.key);
+      if (group.key === unknownStore) showStoreStock(group.key);
+      else openStoreDetails(group.key, group.name);
     });
     tr.insertCell().append(button);
     for (const count of [group.locations.size, group.articles.size, group.units]) {
@@ -116,6 +133,7 @@ function stockArticleLink(field) {
 }
 
 function renderStock() {
+  exportStoreStock.hidden = !storeFilter.value.startsWith('store:');
   const term = search.value.trim().toLocaleLowerCase('ru');
   const found = rows.filter(row => (!stockFilter.value || row[1] === stockFilter.value) &&
     (!storeFilter.value || (row[1] === 'С товаром' && storeKey(row) === storeFilter.value)) &&
@@ -129,7 +147,7 @@ function renderStock() {
     const tr = document.createElement('tr');
     row.forEach((field, index) => {
       const cell = tr.insertCell();
-      if (index === 0 && /^\d{2}\.\d{2}\.\d{2,3}$/.test(field)) {
+      if (index === 0 && /^\d{2,3}\.\d{2}\.\d{2,3}$/.test(field)) {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'stock-map-link';
@@ -252,7 +270,9 @@ function showScanError(message) {
   error.hidden = !message;
 }
 const scanZone = $('scan-zone');
-scanZone.value = localStorage.getItem('pfc-scan-zone') || (scanAddresses.value.trim() ? 'custom' : 'warehouse');
+const savedScanZone = localStorage.getItem('pfc-scan-zone');
+scanZone.value = ['warehouse', 'racks', 'pallets', 'custom'].includes(savedScanZone)
+  ? savedScanZone : scanAddresses.value.trim() ? 'custom' : 'warehouse';
 function updateScanZone() {
   scanAddresses.disabled = scanZone.value !== 'custom';
   $('scan-parallel').disabled = !['custom', 'warehouse'].includes(scanZone.value);
@@ -496,9 +516,7 @@ const historyTo = $('history-to');
 function compareSavedScans(before, after) {
   const previous = new Map(before.cells);
   const latest = new Map(after.cells);
-  const scopeFor = (scan, checked) => scan.scope ?? (scan.palletRun
-    ? Array.from({length: 350}, (_, i) => '01.01.' + String(i + 1).padStart(2, '0'))
-    : checked.keys());
+  const scopeFor = (scan, checked) => scan.scope ?? checked.keys();
   const expected = [...new Set([...scopeFor(before, previous), ...scopeFor(after, latest)])];
   const missing = expected.filter(mx => !previous.has(mx) || !latest.has(mx)).sort();
   const products = new Map();
@@ -547,6 +565,10 @@ $('history-form').addEventListener('submit', event => event.preventDefault());
 for (const field of [historyMode, historyFrom, historyTo]) field.addEventListener('change', renderHistory);
 window.addEventListener('pfc:changes', ({detail: report}) => {
   automaticReport = report;
+  storeDeclines = report?.storeDeclines ?? [];
+  updateReplenishment(report?.replenishment);
+  renderStoreSummary();
+  if (storeDetails.open) renderStoreDetails();
   scanHistory = report?.snapshots ?? [];
   $('history-form').hidden = scanHistory.length < 2;
   if (scanHistory.length < 2) historyMode.value = 'auto';
@@ -555,7 +577,7 @@ window.addEventListener('pfc:changes', ({detail: report}) => {
     select.replaceChildren(...scanHistory.map(item => {
       const option = document.createElement('option');
       option.value = item.id;
-      option.textContent = item.stamp + (item.scope ? ' · МХ: ' + item.cells.length + '/' + item.scope.length : item.palletRun ? ' · Паллеты: ' + item.cells.length + '/350' : ' · МХ: ' + item.cells.length);
+      option.textContent = item.stamp + (item.scope ? ' · МХ: ' + item.cells.length + '/' + item.scope.length : ' · МХ: ' + item.cells.length);
       return option;
     }));
     select.value = scanHistory.some(item => item.id === selected)
@@ -588,29 +610,7 @@ function warehouseGroups() {
       locations: locations.sort(([a], [b]) => a.localeCompare(b, 'ru', {numeric: true}))
     }));
   }
-  if (mapZone.value === 'pallets') {
-    return Array.from({length: 14}, (_, group) => {
-      const start = group * 25 + 1;
-      return {
-        title: 'Места ' + start + '–' + (start + 24),
-        locations: Array.from({length: 25}, (_, i) => {
-          const label = addressPart(start + i);
-          return ['01.01.' + label, label];
-        })
-      };
-    });
-  }
-  return Array.from({length: 9}, (_, group) => {
-    const rack = addressPart(group + 2);
-    return {
-      title: 'Стеллаж ' + rack,
-      locations: Array.from({length: 15}, (_, i) => {
-        const shelf = addressPart(Math.floor(i / 3) + 1);
-        const cell = addressPart(i % 3 + 1);
-        return [rack + '.' + shelf + '.' + cell, shelf + '.' + cell];
-      })
-    };
-  });
+  return [];
 }
 
 function openMapCell(address) {
@@ -1033,10 +1033,10 @@ showView();
 function locationAddresses(mode, fields) {
   const numeric = (value, min, max) => /^\d+$/.test(value) && Number(value) >= min && Number(value) <= max;
   if (mode === 'single') {
-    const match = fields.single.trim().match(/^(\d{2})\.(\d{2})\.(\d{2,3})$/);
-    if (!match || !numeric(match[1], 1, 99) || !numeric(match[2], 1, 99) || !numeric(match[3], 1, 999) ||
-        (match[1] === '01' && match[2] !== '01')) throw new Error('Введите МХ вида 11.01.01 или 01.01.351.');
-    return [match[1] + '.' + match[2] + '.' + addressPart(Number(match[3]))];
+    const match = fields.single.trim().match(/^(\d{2,3})\.(\d{2})\.(\d{2,3})$/);
+    if (!match || !numeric(match[1], 1, 999) || !numeric(match[2], 1, 99) || !numeric(match[3], 1, 999) ||
+        (Number(match[1]) === 1 && match[2] !== '01')) throw new Error('Введите МХ вида 11.01.01 или 01.01.351.');
+    return [addressPart(Number(match[1])) + '.' + match[2] + '.' + addressPart(Number(match[3]))];
   }
   if (mode === 'pallets') {
     if (!numeric(fields.first, 1, 999) || !numeric(fields.last, Number(fields.first), 999)) {
@@ -1045,10 +1045,21 @@ function locationAddresses(mode, fields) {
     return Array.from({length: Number(fields.last) - Number(fields.first) + 1}, (_, i) =>
       '01.01.' + addressPart(Number(fields.first) + i));
   }
-  if (!numeric(fields.rack, 2, 99) || !numeric(fields.shelves, 1, 99) || !numeric(fields.cells, 1, 99) ||
-      Number(fields.shelves) * Number(fields.cells) > 999) throw new Error('Проверьте номер стеллажа и размеры. Максимум 999 МХ за раз.');
-  return Array.from({length: Number(fields.shelves) * Number(fields.cells)}, (_, i) =>
-    [Number(fields.rack), Math.floor(i / Number(fields.cells)) + 1, i % Number(fields.cells) + 1].map(addressPart).join('.'));
+  const firstRack = mode === 'racks' ? fields.rackFirst : fields.rack;
+  const lastRack = mode === 'racks' ? fields.rackLast : fields.rack;
+  if (!numeric(firstRack, 2, 999) || !numeric(lastRack, Number(firstRack), 999) ||
+      !numeric(fields.shelves, 1, 99) || !numeric(fields.cells, 1, 99)) {
+    throw new Error('Проверьте диапазон стеллажей (2–999), число полок и ячеек (1–99).');
+  }
+  const cells = Number(fields.cells);
+  const perRack = Number(fields.shelves) * cells;
+  const total = (Number(lastRack) - Number(firstRack) + 1) * perRack;
+  if (total > 3000) throw new Error('Максимум 3000 МХ за раз.');
+  return Array.from({length: total}, (_, index) => [
+    Number(firstRack) + Math.floor(index / perRack),
+    Math.floor(index % perRack / cells) + 1,
+    index % cells + 1
+  ].map(addressPart).join('.'));
 }
 
 let locationPreview = [];
@@ -1084,18 +1095,19 @@ window.addEventListener('pfc:locations', ({detail}) => {
 $('locations-search').addEventListener('input', renderLocationCatalog);
 $('location-mode').addEventListener('change', () => {
   for (const element of document.querySelectorAll('[data-location-mode]')) {
-    element.hidden = element.dataset.locationMode !== $('location-mode').value;
+    element.hidden = !element.dataset.locationMode.split(' ').includes($('location-mode').value);
   }
 });
 $('locations-form').addEventListener('input', clearLocationPreview);
 $('locations-form').onsubmit = event => {
   event.preventDefault();
   try {
-    const fields = Object.fromEntries(['single','rack','shelves','cells','first','last']
+    const fields = Object.fromEntries(['single','rack','rackFirst','rackLast','shelves','cells','first','last']
       .map(key => [key, $('location-' + key).value]));
     locationPreview = locationAddresses($('location-mode').value, fields);
     $('locations-status').textContent = 'Адресов в списке: ' + locationPreview.length;
-    $('locations-preview').textContent = locationPreview.join(', ');
+    $('locations-preview').textContent = locationPreview.length <= 30 ? locationPreview.join(', ') :
+      locationPreview.slice(0, 15).join(', ') + ' … ' + locationPreview.slice(-3).join(', ');
     for (const id of ['locations-preview', 'locations-enable', 'locations-disable']) $(id).hidden = false;
   } catch (error) {
     clearLocationPreview();
@@ -1751,3 +1763,217 @@ dashboardReset.onclick = () => {
 };
 dashboardMobile.addEventListener('change', restoreDashboardLayout);
 restoreDashboardLayout();
+
+let storeDeclines = [];
+let detailStore;
+const storeDetails = $('store-details');
+const storeDate = new Intl.DateTimeFormat('ru-RU', {day: '2-digit', month: '2-digit', timeZone: 'UTC'});
+const storeNumber = new Intl.NumberFormat('ru-RU');
+
+function openStoreDetails(key, name) {
+  detailStore = {key, name};
+  $('store-details-title').textContent = name;
+  const hasStock = rows.some(row => row[1] === 'С товаром' && storeKey(row) === key);
+  $('store-detail-stock').disabled = !hasStock;
+  $('store-detail-export').disabled = !hasStock;
+  renderStoreDetails();
+  storeDetails.showModal();
+}
+
+function renderStoreDetails() {
+  const period = Number($('store-detail-period').value);
+  const latest = storeDeclines.at(-1)?.day;
+  const chart = $('store-detail-chart');
+  chart.replaceChildren();
+  $('store-detail-date').textContent = '';
+  $('store-detail-table').hidden = true;
+  if (latest === undefined) {
+    $('store-detail-status').textContent = 'Для графика нужны полные обходы за два разных дня.';
+    return;
+  }
+  const byDay = new Map(storeDeclines.map(entry => [entry.day, entry]));
+  const days = Array.from({length: period}, (_, index) => {
+    const day = latest - period + 1 + index;
+    const entry = byDay.get(day);
+    const items = entry?.items.filter(([store]) => store === detailStore.name) ?? [];
+    const total = items.reduce((sum, item) => sum + item[4] - item[5], 0);
+    return {day, entry, items, total};
+  });
+  const max = Math.max(1, ...days.map(day => day.total));
+  const sum = days.reduce((total, day) => total + day.total, 0);
+  $('store-detail-status').textContent = storeNumber.format(sum) +
+    ' шт. снижения за показанные интервалы · пропуск означает отсутствие сравнения';
+  chart.style.setProperty('--days', period);
+  const buttons = new Map();
+  function select(day) {
+    for (const [item, button] of buttons) button.setAttribute('aria-pressed', String(item === day));
+    $('store-detail-date').textContent = day.entry.from + ' → ' + day.entry.to + ' · ' +
+      storeNumber.format(day.total) + ' шт. снижения';
+    const body = $('store-detail-items');
+    body.replaceChildren();
+    for (const [, barcode, article, name, was, now] of day.items.sort((a, b) => (b[4] - b[5]) - (a[4] - a[5]))) {
+      const row = body.insertRow();
+      for (const value of [name, barcode, article, was, now, '−' + (was - now)]) {
+        row.insertCell().textContent = value;
+      }
+    }
+    $('store-detail-table').hidden = !day.items.length;
+  }
+  for (const [index, day] of days.entries()) {
+    const date = storeDate.format(day.day * 86400000);
+    const column = document.createElement('div');
+    column.className = 'store-detail-column';
+    const label = document.createElement('span');
+    label.textContent = period === 7 || index % 7 === 0 || index === period - 1 ? date : '';
+    if (day.entry) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.title = date + ' · ' + storeNumber.format(day.total) + ' шт.';
+      button.setAttribute('aria-label', button.title);
+      button.style.setProperty('--bar', (day.total / max * 100) + '%');
+      button.addEventListener('click', () => select(day));
+      if (day.entry.day - day.entry.fromDay > 1) button.dataset.interval = '';
+      buttons.set(day, button);
+      column.append(button);
+    }
+    column.append(label);
+    chart.append(column);
+  }
+  select(days.at(-1));
+}
+
+$('store-detail-period').addEventListener('change', renderStoreDetails);
+$('store-detail-stock').addEventListener('click', () => {
+  storeDetails.close();
+  showStoreStock(detailStore.key);
+});
+$('store-detail-export').addEventListener('click', () => {
+  const stock = rows.filter(row => row[1] === 'С товаром' && storeKey(row) === detailStore.key);
+  if (stock.length) window.downloadStockXlsx(stock, detailStore.name);
+});
+
+const scheduleStatusField = $('schedule-status');
+const scheduleEnabled = $('schedule-enabled');
+const scheduleSave = $('schedule-save');
+const scheduleDate = new Intl.DateTimeFormat('ru-RU', {
+  timeZone: 'Europe/Moscow', dateStyle: 'short', timeStyle: 'short'
+});
+
+$('scan-settings').addEventListener('toggle', () => {
+  if (!$('scan-settings').open) return;
+  if (document.documentElement.dataset.pfcSchedule !== 'ready') {
+    scheduleStatusField.textContent = 'Для автообхода обновите расширение Chrome до 1.0.5.';
+    return;
+  }
+  sendWarehouse('pfc:schedule');
+});
+scheduleSave.onclick = () => {
+  if (document.documentElement.dataset.pfcSchedule !== 'ready') {
+    scheduleStatusField.textContent = 'Для автообхода обновите расширение Chrome до 1.0.5.';
+    return;
+  }
+  scheduleSave.disabled = true;
+  sendWarehouse('pfc:schedule', {enabled: scheduleEnabled.checked, reader: address.value.trim(),
+    writer: writer.value.trim(), parallel: $('scan-parallel').checked});
+};
+window.addEventListener('pfc:schedule-result', ({detail}) => {
+  scheduleSave.disabled = false;
+  if (detail.error) {
+    scheduleStatusField.textContent = detail.error;
+    return;
+  }
+  scheduleEnabled.checked = detail.enabled;
+  const next = detail.enabled ? 'Следующий запуск ' + scheduleDate.format(detail.next) + ' МСК.' : 'Автообход выключен.';
+  const last = detail.last ? ' Последний запуск ' + scheduleDate.format(detail.last.slot) + ' МСК · ' + detail.last.status : '';
+  scheduleStatusField.textContent = next + last;
+});
+
+const replenishmentStore = $('replenishment-store');
+const replenishmentTarget = $('replenishment-target');
+const replenishmentExport = $('replenishment-export');
+const replenishmentFormat = new Intl.NumberFormat('ru-RU', {maximumFractionDigits: 2});
+let replenishment;
+let replenishmentRows = [];
+
+function updateReplenishment(report) {
+  replenishment = report;
+  const previous = replenishmentStore.value;
+  const names = [...new Set((report?.items ?? []).map(item => item.store))]
+    .sort((a, b) => a.localeCompare(b, 'ru'));
+  replenishmentStore.replaceChildren(...names.map(name => new Option(name, name)));
+  if (names.includes(previous)) replenishmentStore.value = previous;
+  loadReplenishmentTarget();
+}
+
+function replenishmentTargetKey() {
+  return 'pfc-replenishment-target:' + replenishmentStore.value;
+}
+
+function loadReplenishmentTarget() {
+  replenishmentTarget.value = localStorage.getItem(replenishmentTargetKey()) || '10';
+  renderReplenishment();
+}
+
+function renderReplenishment() {
+  const status = $('replenishment-status');
+  const body = $('replenishment-rows');
+  body.replaceChildren();
+  replenishmentRows = [];
+  replenishmentExport.disabled = true;
+  $('replenishment-table').hidden = true;
+  if (!replenishment?.date) {
+    status.textContent = 'Ожидается полный вечерний обход всех активных МХ.';
+    return;
+  }
+  const target = replenishmentTarget.valueAsNumber;
+  if (!Number.isInteger(target) || target < 1 || target > 90) {
+    status.textContent = 'Укажите целевой запас от 1 до 90 дней.';
+    return;
+  }
+  const {period, date, stamp, items} = replenishment;
+  const store = replenishmentStore.value;
+  status.textContent = `Отсечка ${date.split('-').reverse().join('.')} · обход завершён ${stamp} МСК · окно ${period} дней. Расход оценён по снижению остатков.`;
+  const report = items.filter(item => item.store === store).map(item => {
+    const daily = item.used ? item.units / item.used : null;
+    const days = daily > 0 && item.quantity !== null ? item.quantity / daily : null;
+    const suggested = daily === null || item.quantity === null ? null :
+      Math.max(0, Math.ceil(item.units * target / item.used - item.quantity));
+    const confidence = item.quantity === null ? 'Неполные сведения о НМ' :
+      !item.used ? 'Нет сопоставимых суток' : item.used < 7 ? 'Мало данных' : 'Оценка';
+    return {...item, daily, days, suggested, confidence};
+  }).sort((a, b) =>
+    (a.days ?? Infinity) - (b.days ?? Infinity) ||
+    (b.suggested ?? -1) - (a.suggested ?? -1) || a.article.localeCompare(b.article, 'ru', {numeric: true}));
+
+  if (!report.length) {
+    status.textContent += ' Нет позиций с определённым магазином.';
+    return;
+  }
+  const labels = ['НМ', 'Товар', 'Остаток, шт.', 'Расход, шт./сутки', 'Учтено дней', 'Запас, дней', 'Довезти, шт.', 'Оценка'];
+  replenishmentRows = [
+    ['Магазин WB', 'Вечерняя отсечка МСК', 'Целевой запас, дней', ...labels],
+    ...report.map(({article, name, quantity, daily, used, days, suggested, confidence}) => [
+      store, date, target, article, name, quantity ?? '—', daily ?? '—', `${used} из ${period}`,
+      days ?? '—', suggested ?? '—', confidence
+    ])
+  ];
+  for (const values of replenishmentRows.slice(1)) {
+    const row = body.insertRow();
+    values.slice(3).forEach((value, index) => {
+      const cell = row.insertCell();
+      cell.dataset.mobileLabel = labels[index];
+      cell.textContent = typeof value === 'number' ? replenishmentFormat.format(value) : value;
+    });
+  }
+  $('replenishment-table').hidden = false;
+  replenishmentExport.disabled = false;
+}
+
+replenishmentStore.addEventListener('change', loadReplenishmentTarget);
+replenishmentTarget.addEventListener('input', () => {
+  if (replenishmentStore.value && replenishmentTarget.value && replenishmentTarget.validity.valid) {
+    localStorage.setItem(replenishmentTargetKey(), replenishmentTarget.value);
+  }
+  renderReplenishment();
+});
+replenishmentExport.onclick = () => window.downloadReplenishmentXlsx(replenishmentRows, replenishmentStore.value);
