@@ -1283,7 +1283,7 @@ function refreshTransactions() {
   if (transactionsButton.disabled) return;
   $('transactions-prepared').textContent = '—';
   if (document.documentElement.dataset.pfcTransactions !== 'ready') {
-    transactionsStatus.textContent = 'Обновите расширение ПФЦ до 1.0.0 и перезагрузите страницу.';
+    transactionsStatus.textContent = 'Проверьте, что расширение ПФЦ включено и настроено для адреса этого сайта, затем обновите страницу.';
     return;
   }
   transactionsButton.disabled = true;
@@ -1337,7 +1337,7 @@ if (window.matchMedia('(max-width: 720px)').matches) {
   });
   const readyTimeout = setTimeout(() => {
     ready.disconnect();
-    transactionsStatus.textContent = 'Расширение для транзакций не подключилось. Проверьте версию 0.11.5 и обновите страницу.';
+    transactionsStatus.textContent = 'Расширение для транзакций не подключилось. Проверьте, что расширение ПФЦ включено и настроено для адреса этого сайта, затем обновите страницу.';
   }, 8000);
   ready.observe(transactionsRoot, {attributes: true, attributeFilter: ['data-pfc-transactions']});
 }
@@ -1778,6 +1778,7 @@ function openStoreDetails(key, name) {
   $('store-detail-export').disabled = !hasStock;
   renderStoreDetails();
   storeDetails.showModal();
+  storeDetails.querySelector('form button').focus();
 }
 
 function renderStoreDetails() {
@@ -1816,6 +1817,7 @@ function renderStoreDetails() {
       for (const value of [name, barcode, article, was, now, '−' + (was - now)]) {
         row.insertCell().textContent = value;
       }
+      labelMobileCells(row, ['', 'БК', 'НМ', 'Было', 'Стало', 'Снижение']);
     }
     $('store-detail-table').hidden = !day.items.length;
   }
