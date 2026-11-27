@@ -565,6 +565,7 @@ $('history-form').addEventListener('submit', event => event.preventDefault());
 for (const field of [historyMode, historyFrom, historyTo]) field.addEventListener('change', renderHistory);
 window.addEventListener('pfc:changes', ({detail: report}) => {
   automaticReport = report;
+  renderMaxActivity(report?.maxActivity);
   storeDeclines = report?.storeDeclines ?? [];
   renderDemandRanking();
   updateReplenishment(report?.replenishment);
@@ -1692,7 +1693,7 @@ function restoreDashboardLayout() {
     const card = dashboardCards.find(module => module.dataset.dashboardModule === id);
     if (!card) continue;
     const settings = Array.isArray(saved) ? saved.find(item => item?.id === id) : null;
-    const defaultWidth = !dashboardMobile.matches && id !== 'trend' ? 'half' : 'full';
+    const defaultWidth = !dashboardMobile.matches && !['trend', 'max-activity'].includes(id) ? 'half' : 'full';
     card.dataset.width = ['half', 'full'].includes(settings?.width) ? settings.width : defaultWidth;
     card.dataset.height = dashboardHeights.some(([key]) => key === settings?.height) ? settings.height : 'normal';
     setDashboardMinimum(card, settings?.minimum);
@@ -2125,3 +2126,23 @@ $('demand-more').onclick = event => {
   button.setAttribute('aria-expanded', String(button.getAttribute('aria-expanded') !== 'true'));
   renderDemandRanking();
 };
+
+function renderMaxActivity(activity) {
+  $('max-activity').hidden = !activity;
+  if (!activity) return;
+  const rows = activity.periods?.[$('max-activity-period').value] ?? [];
+  $('max-activity-status').textContent = activity.error || (rows.length
+    ? 'Одобренных магазинов: ' + rows.length + ' · с визитами за период: ' + rows.filter(row => row.visits > 0).length
+    : 'Нет одобренных магазинов.');
+  $('max-activity-table').hidden = !rows.length;
+  const body = $('max-activity-rows');
+  body.replaceChildren();
+  for (const store of rows) {
+    const row = body.insertRow();
+    for (const value of [store.name, store.lastLabel || 'Нет визитов', store.days, store.visits, store.products, store.exports]) {
+      row.insertCell().textContent = value;
+    }
+    labelMobileCells(row, ['', 'Последний визит, МСК', 'Активных дней', 'Визитов', 'Карточек НМ', 'Запросов Excel']);
+  }
+}
+$('max-activity-period').addEventListener('change', () => renderMaxActivity(automaticReport?.maxActivity));
