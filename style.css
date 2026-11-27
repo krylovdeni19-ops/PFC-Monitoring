@@ -606,3 +606,9 @@ summary { cursor: pointer; font-weight: 650; }
   #store-detail-table tr td:nth-child(2), #store-detail-table tr td:nth-child(3) { grid-column: span 3; width: auto; }
   #store-detail-table td[data-mobile-label]::before { content: attr(data-mobile-label); display: block; font-size: .75rem; color: #475569; }
 }
+
+.demand-ranking { margin: 12px 0 0; padding-inline-start: 28px; }
+.demand-ranking li { padding: 8px 10px; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.demand-ranking li::marker { color: #475569; font-weight: 700; }
+.demand-ranking small { display: block; color: #475569; }
+.demand-ranking p { margin: 4px 0 0; font-weight: 600; }

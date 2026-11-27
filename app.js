@@ -566,6 +566,7 @@ for (const field of [historyMode, historyFrom, historyTo]) field.addEventListene
 window.addEventListener('pfc:changes', ({detail: report}) => {
   automaticReport = report;
   storeDeclines = report?.storeDeclines ?? [];
+  renderDemandRanking();
   updateReplenishment(report?.replenishment);
   renderStoreSummary();
   if (storeDetails.open) renderStoreDetails();
@@ -1979,3 +1980,55 @@ replenishmentTarget.addEventListener('input', () => {
   renderReplenishment();
 });
 replenishmentExport.onclick = () => window.downloadReplenishmentXlsx(replenishmentRows, replenishmentStore.value);
+
+function rankStoreDemand(intervals) {
+  const stores = new Map();
+  const order = (a, b) => b.intervals.size - a.intervals.size || b.units - a.units ||
+    a.name.localeCompare(b.name, 'ru');
+  for (const {day, items} of intervals) {
+    for (const [name, , article, title, before, after] of items) {
+      if (before <= after) continue;
+      if (!stores.has(name)) stores.set(name, {name, intervals: new Set(), units: 0, products: new Map()});
+      const store = stores.get(name);
+      if (!store.products.has(article)) {
+        store.products.set(article, {article, name: title || 'НМ ' + article, intervals: new Set(), units: 0});
+      }
+      for (const entry of [store, store.products.get(article)]) {
+        entry.intervals.add(day);
+        entry.units += before - after;
+      }
+    }
+  }
+  return [...stores.values()].sort(order).slice(0, 10).map(store => ({
+    ...store, top: [...store.products.values()].sort(order)[0]
+  }));
+}
+
+function renderDemandRanking() {
+  const period = Number($('demand-period').value);
+  const latest = storeDeclines.at(-1)?.day;
+  const intervals = storeDeclines.filter(({day, fromDay}) => day > latest - period && fromDay === day - 1);
+  const ranking = $('demand-ranking');
+  ranking.replaceChildren();
+  $('demand-status').textContent = intervals.length
+    ? 'Сопоставлено ' + intervals.length + ' из ' + period + ' суток · по частоте снижения остатков'
+    : 'Нужны полные обходы за соседние дни.';
+  for (const store of rankStoreDemand(intervals)) {
+    const row = document.createElement('li');
+    const top = store.top;
+    const heading = dashboardButton(store.name, () => openStoreDetails('store:' + store.name, store.name));
+    const totals = document.createElement('small');
+    totals.textContent = store.intervals.size + ' сут. со снижением · ' + storeNumber.format(store.units) + ' шт.';
+    const product = document.createElement('p');
+    product.textContent = top.name;
+    const detail = document.createElement('small');
+    detail.textContent = 'НМ ' + top.article + ' · ' + top.intervals.size + ' сут. · ' + storeNumber.format(top.units) + ' шт.';
+    row.append(heading, totals, product, detail);
+    ranking.append(row);
+  }
+  if (intervals.length && !ranking.children.length) {
+    $('demand-status').textContent += ' · Снижения по известным магазинам нет.';
+  }
+}
+
+$('demand-period').addEventListener('change', renderDemandRanking);
