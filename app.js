@@ -1632,6 +1632,53 @@ function setDashboardMinimum(card, value) {
   }
 }
 
+function addDashboardResizeHandle(card) {
+  const grip = document.createElement('span');
+  grip.className = 'dashboard-resize-grip';
+  grip.title = 'Потяните за угол, чтобы изменить размер';
+  grip.setAttribute('aria-hidden', 'true');
+  card.append(grip);
+
+  let drag;
+  function finish(event, cancelled) {
+    if (drag?.pointer !== event.pointerId) return;
+    if (cancelled) {
+      card.dataset.width = drag.width;
+      setDashboardMinimum(card, drag.minimum);
+    }
+    const changed = card.dataset.width !== drag.width ||
+      card.dataset.minimum !== drag.originalMinimum;
+    drag = undefined;
+    card.classList.remove('is-resizing');
+    if (changed) saveDashboardLayout('Размер модуля сохранён.');
+  }
+
+  grip.onpointerdown = event => {
+    if (!dashboardEditing || dashboardMobile.matches || event.button !== 0 || drag) return;
+    event.preventDefault();
+    const bounds = card.getBoundingClientRect();
+    drag = {pointer: event.pointerId, x: event.clientX, y: event.clientY,
+      height: bounds.height, cardWidth: bounds.width, width: card.dataset.width,
+      originalMinimum: card.dataset.minimum, minimum: Number(card.dataset.minimum)};
+    grip.setPointerCapture(event.pointerId);
+    card.classList.add('is-resizing');
+  };
+  grip.onpointermove = event => {
+    if (drag?.pointer !== event.pointerId) return;
+    const dy = event.clientY - drag.y;
+    if (Math.abs(dy) > 3 || card.dataset.minimum !== drag.originalMinimum) {
+      setDashboardMinimum(card, Math.round(Math.max(120, Math.min(1600, drag.height + dy))));
+    }
+    const dx = event.clientX - drag.x;
+    const threshold = Math.abs(dashboardModules.clientWidth / 2 - drag.cardWidth) / 2 + 48;
+    card.dataset.width = drag.width === 'half'
+      ? (dx >= threshold ? 'full' : 'half')
+      : (dx <= -threshold ? 'half' : 'full');
+  };
+  grip.onpointerup = event => finish(event, false);
+  grip.onpointercancel = grip.onlostpointercapture = event => finish(event, true);
+}
+
 function restoreDashboardLayout() {
   let saved;
   try {
@@ -1772,6 +1819,7 @@ for (const card of dashboardCards) {
   });
 
   card.prepend(bar);
+  addDashboardResizeHandle(card);
   dashboardControls.set(card, {bar, previous, next, width, height, minimum});
 }
 

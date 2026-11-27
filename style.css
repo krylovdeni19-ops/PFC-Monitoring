@@ -665,3 +665,27 @@ summary { cursor: pointer; font-weight: 650; }
   #dashboard #dashboard-modules [data-minimum] .trend-plot { height: var(--dashboard-chart-height); }
   .dashboard-minimum { display: none; }
 }
+
+#dashboard-modules > section { position: relative; }
+.dashboard-resize-grip { display: none; }
+@media (min-width: 721px) {
+  #dashboard-modules.is-editing .dashboard-resize-grip {
+    display: block;
+    position: absolute;
+    inset: auto 4px 4px auto;
+    width: 24px;
+    height: 24px;
+    border-radius: 5px;
+    background: #e2ecf6;
+    cursor: nwse-resize;
+    touch-action: none;
+  }
+  .dashboard-resize-grip::after {
+    content: '';
+    position: absolute;
+    inset: 8px 5px 5px 8px;
+    border-right: 2px solid #335d80;
+    border-bottom: 2px solid #335d80;
+  }
+  #dashboard-modules > .is-resizing { user-select: none; }
+}
