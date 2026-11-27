@@ -1622,6 +1622,16 @@ function dashboardLayoutKey() {
   return 'pfc-dashboard-layout-' + (dashboardMobile.matches ? 'mobile' : 'desktop');
 }
 
+function setDashboardMinimum(card, value) {
+  if (Number.isInteger(value) && value >= 120 && value <= 1600) {
+    card.dataset.minimum = value;
+    card.style.setProperty('--dashboard-minimum', value + 'px');
+  } else {
+    delete card.dataset.minimum;
+    card.style.removeProperty('--dashboard-minimum');
+  }
+}
+
 function restoreDashboardLayout() {
   let saved;
   try {
@@ -1638,6 +1648,7 @@ function restoreDashboardLayout() {
     const defaultWidth = !dashboardMobile.matches && id !== 'trend' ? 'half' : 'full';
     card.dataset.width = ['half', 'full'].includes(settings?.width) ? settings.width : defaultWidth;
     card.dataset.height = dashboardHeights.some(([key]) => key === settings?.height) ? settings.height : 'normal';
+    setDashboardMinimum(card, settings?.minimum);
     dashboardModules.append(card);
   }
   requestAnimationFrame(() => dashboardCards.forEach(fitDashboardCard));
@@ -1648,7 +1659,8 @@ function saveDashboardLayout(message) {
   const layout = [...dashboardModules.children].map(card => ({
     id: card.dataset.dashboardModule,
     width: card.dataset.width,
-    height: card.dataset.height
+    height: card.dataset.height,
+    minimum: Number(card.dataset.minimum) || undefined
   }));
   try {
     localStorage.setItem(dashboardLayoutKey(), JSON.stringify(layout));
@@ -1666,6 +1678,7 @@ function refreshDashboardControls() {
     controls.next.disabled = !card.nextElementSibling;
     controls.width.textContent = card.dataset.width === 'half' ? 'На всю ширину' : 'На полширины';
     controls.height.value = card.dataset.height;
+    controls.minimum.value = card.dataset.minimum || '';
   }
 }
 
@@ -1695,6 +1708,22 @@ for (const card of dashboardCards) {
   height.setAttribute('aria-label', 'Размер: ' + name);
   height.replaceChildren(...dashboardHeights.map(([value, label]) => new Option(label, value)));
   handle.before(height);
+  const minimumLabel = document.createElement('label');
+  minimumLabel.className = 'dashboard-minimum';
+  minimumLabel.textContent = 'Мин. высота, px';
+  const minimum = document.createElement('input');
+  minimum.type = 'number';
+  minimum.min = '120';
+  minimum.max = '1600';
+  minimum.step = '1';
+  minimum.placeholder = 'Авто';
+  minimumLabel.append(minimum);
+  handle.before(minimumLabel);
+  minimum.onchange = () => {
+    if (!minimum.reportValidity()) return;
+    setDashboardMinimum(card, minimum.valueAsNumber);
+    saveDashboardLayout('Минимальная высота модуля изменена.');
+  };
   previous.textContent = '↑ Раньше';
   next.textContent = '↓ Позже';
   handle.textContent = 'Перетащить';
@@ -1713,6 +1742,7 @@ for (const card of dashboardCards) {
   };
   height.onchange = () => {
     card.dataset.height = height.value;
+    setDashboardMinimum(card);
     saveDashboardLayout('Высота модуля изменена.');
   };
   handle.addEventListener('dragstart', event => {
@@ -1742,7 +1772,7 @@ for (const card of dashboardCards) {
   });
 
   card.prepend(bar);
-  dashboardControls.set(card, {bar, previous, next, width, height});
+  dashboardControls.set(card, {bar, previous, next, width, height, minimum});
 }
 
 dashboardEdit.onclick = () => {

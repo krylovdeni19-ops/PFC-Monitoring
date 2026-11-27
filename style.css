@@ -653,3 +653,15 @@ summary { cursor: pointer; font-weight: 650; }
     color: #475569;
   }
 }
+
+#dashboard-modules > section { min-height: var(--dashboard-minimum, 0px); }
+.dashboard-minimum { grid-column: 1 / -1; }
+.dashboard-minimum input { width: 100%; }
+#dashboard #dashboard-modules [data-minimum] .trend-plot {
+  height: max(var(--dashboard-chart-height), calc(var(--dashboard-minimum) - 230px));
+}
+@media (max-width: 720px) {
+  #dashboard-modules > section { min-height: 0; }
+  #dashboard #dashboard-modules [data-minimum] .trend-plot { height: var(--dashboard-chart-height); }
+  .dashboard-minimum { display: none; }
+}
