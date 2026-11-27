@@ -2030,6 +2030,9 @@ function renderDemandRanking() {
     product.append(article);
     row.insertCell().textContent = storeNumber.format(top.units);
     row.insertCell().textContent = storeNumber.format(top.units / intervals.length);
+    row.setAttribute('role', 'row');
+    for (const cell of row.cells) cell.setAttribute('role', 'cell');
+    labelMobileCells(row, ['', 'Товар (НМ)', 'Количество, шт.', 'Среднее, шт./сутки']);
   }
   ranking.closest('table').hidden = !stores.length;
   if (intervals.length && !ranking.children.length) {

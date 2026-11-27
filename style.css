@@ -617,3 +617,39 @@ summary { cursor: pointer; font-weight: 650; }
 .demand-table small { display: block; color: #475569; }
 .demand-table button { text-align: left; min-height: 0; padding: 0; }
 #demand-more { margin-top: 8px; }
+
+[data-dashboard-module="demand"] { container-type: inline-size; }
+.demand-table :is(th, td) {
+  padding-block: max(5px, var(--dashboard-row-space, 7px));
+  white-space: normal;
+}
+.demand-table .stock-map-link {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+@container (max-width: 440px) {
+  .demand-table, .demand-table tbody { display: block; }
+  .demand-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .demand-table tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px 10px;
+    padding: max(5px, var(--dashboard-row-space, 7px)) 6px;
+    border-bottom: 1px solid var(--line);
+  }
+  .demand-table tr td:nth-child(n) { width: auto; min-width: 0; padding: 0; text-align: left; border: 0; }
+  .demand-table td:nth-child(-n+2) { grid-column: 1 / -1; }
+  .demand-table td:nth-child(n+3)::before {
+    content: attr(data-mobile-label);
+    display: block;
+    font-size: .75rem;
+    color: #475569;
+  }
+}
