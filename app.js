@@ -3,6 +3,13 @@ const address = $('reader');
 const status = $('status');
 const search = $('search');
 let rows = [];
+let stockPage = 0;
+const stockPageSize = 60;
+
+function showReadStatus(message) {
+  status.textContent = message;
+  $('read-status').textContent = message;
+}
 const stockFilter = $('stock-filter');
 const storeFilter = $('store-filter');
 const exportStoreStock = $('export-store-stock');
@@ -17,12 +24,17 @@ $('read-settings').open = !address.value;
 $('connect').onsubmit = event => {
   event.preventDefault();
   if (document.documentElement.dataset.pfcExtension !== 'ready') {
-    status.textContent = 'Установите расширение ПФЦ 0.6.1 и обновите страницу.';
+    showReadStatus('Включите расширение ПФЦ и обновите страницу. На телефоне используйте форму «Данные склада».');
     return;
   }
-  localStorage.setItem('pfc-reader-url', address.value);
-  status.textContent = 'Читаем остатки. Если Google запросит вход, подтвердите его в открывшейся вкладке.';
-  window.dispatchEvent(new CustomEvent('pfc:connect', {detail: address.value}));
+  let url;
+  try { url = mobileReaderAddress(address.value).href; }
+  catch (error) { showReadStatus(error.message); return; }
+  address.value = url;
+  mobileReaderInput.value = url;
+  localStorage.setItem('pfc-reader-url', url);
+  showReadStatus('Загружаем остатки… Если Google запросит вход, подтвердите его в открывшейся вкладке.');
+  window.dispatchEvent(new CustomEvent('pfc:connect', {detail: url}));
 };
 function storeName(row) {
   return row[1] === 'С товаром' ? String(row[6]).trim() : '';
@@ -69,7 +81,7 @@ function showStoreStock(key) {
   search.value = '';
   stockFilter.value = '';
   storeFilter.value = key;
-  renderStock();
+  resetStockPage();
   if (location.hash !== '#stock-view') history.pushState(null, '', '#stock-view');
   showView();
   $('stock').scrollIntoView();
@@ -142,8 +154,19 @@ function renderStock() {
   const count = found.reduce((total, row) => total + (Number(row[4]) || 0), 0);
   const locations = new Set(found.map(row => row[0])).size;
   $('count').textContent = 'МХ: ' + locations + ' · Строк: ' + found.length + ' · Всего: ' + count + ' шт.';
+  const pageCount = Math.max(1, Math.ceil(found.length / stockPageSize));
+  stockPage = Math.min(stockPage, pageCount - 1);
+  $('stock-empty').hidden = found.length > 0;
+  $('stock-empty').textContent = rows.length ? 'По этим фильтрам ничего не найдено.' : 'В сохранённом отчёте пока нет остатков.';
+  $('stock-results').hidden = !found.length;
+  $('stock-pages').hidden = pageCount === 1;
+  $('stock-page').textContent = (stockPage + 1) + ' из ' + pageCount;
+  $('stock-prev').disabled = stockPage === 0;
+  $('stock-next').disabled = stockPage === pageCount - 1;
+  $('stock-results').scrollTop = 0;
   const body = document.createDocumentFragment();
-  for (const row of found) {
+  const offset = stockPage * stockPageSize;
+  for (const row of found.slice(offset, offset + stockPageSize)) {
     const tr = document.createElement('tr');
     row.forEach((field, index) => {
       const cell = tr.insertCell();
@@ -182,10 +205,22 @@ function renderStock() {
   }
   document.querySelector('#stock tbody').replaceChildren(body);
 }
-search.addEventListener('input', renderStock);
-stockFilter.addEventListener('change', renderStock);
-storeFilter.addEventListener('change', renderStock);
-window.addEventListener('pfc:status', event => { status.textContent = event.detail; });
+function resetStockPage() {
+  stockPage = 0;
+  renderStock();
+}
+search.addEventListener('input', resetStockPage);
+stockFilter.addEventListener('change', resetStockPage);
+storeFilter.addEventListener('change', resetStockPage);
+for (const [id, step] of [['stock-prev', -1], ['stock-next', 1]]) {
+  $(id).onclick = () => {
+    stockPage += step;
+    renderStock();
+    $('stock-results').focus({preventScroll: true});
+    $('stock-results').scrollIntoView({block: 'start'});
+  };
+}
+window.addEventListener('pfc:status', event => showReadStatus(event.detail));
 function acceptStock(data) {
   if (!Array.isArray(data) || !data.every(row => Array.isArray(row) && row.length === 8 &&
       row.every(field => typeof field === 'string' || typeof field === 'number'))) {
@@ -197,14 +232,16 @@ function acceptStock(data) {
   renderDashboardStores();
   $('stock').hidden = false;
   $('summary').hidden = false;
-  status.textContent = 'МХ в отчёте: ' + new Set(rows.map(row => row[0])).size;
+  showReadStatus('Остатки загружены. МХ в отчёте: ' + new Set(rows.map(row => row[0])).size);
   renderSummary();
   mapLoaded = true;
   renderWarehouseMap();
-  renderStock();
+  resetStockPage();
   return true;
 }
-window.addEventListener('pfc:result', event => { acceptStock(event.detail); });
+window.addEventListener('pfc:result', event => {
+  if (!acceptStock(event.detail)) showReadStatus('Не удалось прочитать формат отчёта. Проверьте версию проекта чтения.');
+});
 $('import-stock').onsubmit = event => {
   event.preventDefault();
   const field = $('stock-data');
@@ -431,7 +468,7 @@ function renderChanges(report) {
   $('changes-totals').hidden = true;
   missing.hidden = true;
   $('changes-table').hidden = true;
-  if (!report || report.unavailable || report.error) {
+  if (!report || report.unavailable || report.error || !Array.isArray(report.products) || !Array.isArray(report.missing)) {
     status.textContent = report?.error || (report?.unavailable
       ? 'В журнале пока нет полного обхода с подтверждёнными результатами.'
       : 'Для сравнения обновите расширение и приложение чтения.');
@@ -1027,10 +1064,15 @@ function showView() {
   }
 }
 window.addEventListener('hashchange', () => {
+  if (location.hash === '#main-content') return;
   showView();
   window.scrollTo(0, 0);
 });
 showView();
+document.querySelector('.skip-link').onclick = event => {
+  event.preventDefault();
+  $('main-content').focus();
+};
 
 function locationAddresses(mode, fields) {
   const numeric = (value, min, max) => /^\d+$/.test(value) && Number(value) >= min && Number(value) <= max;
@@ -1280,28 +1322,29 @@ sellerBatchButton.addEventListener('click', async event => {
 const transactionsButton = $('transactions-refresh');
 const transactionsStatus = $('transactions-status');
 let transactionsTimeout;
+let transactionsRequest = 0;
 let shipmentHistory;
 function refreshTransactions() {
   if (transactionsButton.disabled) return;
-  $('transactions-prepared').textContent = '—';
   if (document.documentElement.dataset.pfcTransactions !== 'ready') {
     transactionsStatus.textContent = 'Проверьте, что расширение ПФЦ включено и настроено для адреса этого сайта, затем обновите страницу.';
     return;
   }
   transactionsButton.disabled = true;
+  const requestId = ++transactionsRequest;
   transactionsStatus.textContent = 'Открываем «Все транзакции» в фоне…';
   transactionsTimeout = setTimeout(() => {
     transactionsStatus.textContent = 'Расширение не ответило. Повторите чтение.';
     transactionsButton.disabled = false;
   }, 60000);
-  sendWarehouse('pfc:transactions', {writer: writer.value.trim()});
+  sendWarehouse('pfc:transactions', {writer: writer.value.trim(), requestId});
 }
 
 transactionsButton.addEventListener('click', refreshTransactions);
 
 
 window.addEventListener('pfc:transactions-result', ({detail}) => {
-  if (!transactionsButton.disabled) return;
+  if (!transactionsButton.disabled || (detail?.requestId !== undefined && detail.requestId !== transactionsRequest)) return;
   clearTimeout(transactionsTimeout);
   transactionsButton.disabled = false;
   if (!detail?.ok) {
@@ -1499,7 +1542,10 @@ $('shipment-period').addEventListener('change', () => {
 });
 
 function mobileReaderAddress(value) {
-  const url = new URL(value.trim());
+  let url;
+  try { url = new URL(value.trim()); }
+  catch { throw new Error('Укажите ссылку /exec из проекта Apps Script чтения.'); }
+  url.pathname = url.pathname.replace(/^\/macros\/u\/\d+\//, '/macros/').replace(/\/$/, '');
   if (url.origin !== 'https://script.google.com' ||
       !/^\/macros\/s\/[\w-]+\/exec\/?$/.test(url.pathname) || url.username || url.password) {
     throw new Error('Укажите ссылку /exec из проекта Apps Script чтения.');
@@ -1578,7 +1624,7 @@ window.addEventListener('message', event => {
     return;
   }
   acceptLocationCatalog(data.locations);
-  if (data.changes) window.dispatchEvent(new CustomEvent('pfc:changes', {detail: data.changes}));
+  window.dispatchEvent(new CustomEvent('pfc:changes', {detail: data.changes}));
   const today = new Intl.DateTimeFormat('ru-RU', {
     day: 'numeric', month: 'numeric', year: 'numeric', timeZone: 'Europe/Moscow'
   }).formatToParts(new Date()).filter(part => ['day', 'month', 'year'].includes(part.type))

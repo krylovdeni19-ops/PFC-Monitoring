@@ -6,15 +6,16 @@
   <meta name="theme-color" content="#12243b">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./pfc-192.png">
-  <title>Остатки ПФЦ</title>
-  <link rel="stylesheet" href="style.css?v=1.0.6-9">
+  <title>PFC Analitik</title>
+  <link rel="stylesheet" href="style.css?v=1.1.0">
   <script src="stock-xlsx.js?v=1.0.6" defer></script>
-  <script src="app.js?v=1.0.6-9" defer></script>
+  <script src="app.js?v=1.1.0" defer></script>
 </head>
 <body>
+  <a class="skip-link" href="#main-content">К содержимому</a>
   <header class="topbar">
     <div class="topbar-inner">
-      <a class="brand" href="./"><span class="brand-mark" aria-hidden="true">П</span> ПФЦ Мониторинг</a>
+      <a class="brand" href="./"><span class="brand-mark" aria-hidden="true">П</span> PFC Analitik</a>
       <nav class="view-nav" aria-label="Разделы склада">
         <a href="#stock-view" aria-current="page">Остатки</a>
         <a href="#dashboard">Дашборд</a>
@@ -25,7 +26,7 @@
       </nav>
     </div>
   </header>
-  <main>
+  <main id="main-content" tabindex="-1">
     <nav class="mobile-tabs" aria-label="Разделы склада на телефоне">
       <a href="#stock-view"><span aria-hidden="true">▤</span>Остатки</a>
       <a href="#warehouse-map"><span aria-hidden="true">▦</span>Карта</a>
@@ -34,16 +35,16 @@
       <a href="#changes" aria-label="Изменения остатков"><span aria-hidden="true">⇄</span>Разница</a>
       <a href="#settings" aria-label="Настройки"><span aria-hidden="true">⚙</span>Опции</a>
     </nav>
+    <div id="stock-view" class="view" aria-labelledby="title">
     <section id="mobile-access" class="panel settings" hidden>
-      <h2>Остатки на телефоне</h2>
+      <h2>Данные склада</h2>
       <form id="mobile-reader-form">
         <label for="mobile-reader-url">Ссылка Apps Script чтения</label>
-        <input type="url" id="mobile-reader-url" placeholder="https://script.google.com/macros/s/…/exec" required>
+        <input type="url" id="mobile-reader-url" name="reader" autocomplete="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec" required>
         <button type="submit">Войти и загрузить данные</button>
       </form>
       <p id="mobile-reader-status" role="status"></p>
     </section>
-    <div id="stock-view" class="view">
     <section class="overview" aria-labelledby="title">
       <div class="overview-top">
         <div>
@@ -91,8 +92,14 @@
           <button id="export-store-stock" type="button" class="secondary" hidden>Скачать Excel</button>
         </div>
       </div>
-      <div class="table" tabindex="0" role="region" aria-label="Таблица остатков">
+      <p id="stock-empty" class="stock-empty" hidden></p>
+      <div id="stock-results" class="table" tabindex="0" role="region" aria-label="Таблица остатков">
         <table><thead><tr><th>МХ</th><th>Результат</th><th>Баркод</th><th>Название</th><th>Количество</th><th>Артикул WB</th><th>Магазин WB</th><th>Проверено МСК</th></tr></thead><tbody></tbody></table>
+      </div>
+      <div id="stock-pages" class="stock-pages" hidden>
+        <button type="button" id="stock-prev" class="secondary">Назад</button>
+        <span id="stock-page" role="status"></span>
+        <button type="button" id="stock-next" class="secondary">Далее</button>
       </div>
     </section>
 
@@ -287,9 +294,10 @@
           <form id="connect">
             <label for="reader">Ссылка /exec приложения чтения</label>
             <div class="form-row">
-              <input id="reader" type="url" required>
+              <input id="reader" name="reader" type="url" autocomplete="off" spellcheck="false" required>
               <button class="secondary">Загрузить сохранённые остатки</button>
             </div>
+            <p id="read-status" role="status"></p>
           </form>
         </details>
         <details id="scan-settings">
