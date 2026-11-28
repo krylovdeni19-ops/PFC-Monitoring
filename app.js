@@ -2050,7 +2050,9 @@ function renderReplenishment() {
   replenishmentExport.disabled = true;
   $('replenishment-table').hidden = true;
   if (!replenishment?.date) {
-    status.textContent = 'Ожидается полный вечерний обход всех активных МХ.';
+    status.textContent = replenishment?.activeCount === 0
+      ? 'В справочнике нет активных МХ. Добавьте их в настройках.'
+      : 'Не найден обход, покрывающий все текущие активные МХ. Сверьте справочник с журналом.';
     return;
   }
   const target = replenishmentTarget.valueAsNumber;
@@ -2058,9 +2060,11 @@ function renderReplenishment() {
     status.textContent = 'Укажите целевой запас от 1 до 90 дней.';
     return;
   }
-  const {period, date, stamp, items} = replenishment;
+  const {period, date, stamp, items, scanCount} = replenishment;
   const store = replenishmentStore.value;
-  status.textContent = `Отсечка ${date.split('-').reverse().join('.')} · обход завершён ${stamp} МСК · окно ${period} дней. Расход оценён по снижению остатков.`;
+  status.textContent = `Последний полный обход: ${stamp} МСК. Расход оценён по снижению остатков за последние ${period} дней.`;
+  if (Number.isInteger(scanCount)) status.textContent += ` Полных обходов по разным дням: ${scanCount}.`;
+  if (scanCount === 1) status.textContent += ' Для расчёта расхода нужен ещё один полный обход в другой день.';
   const report = items.filter(item => item.store === store).map(item => {
     const daily = item.used ? item.units / item.used : null;
     const days = daily > 0 && item.quantity !== null ? item.quantity / daily : null;
@@ -2079,7 +2083,7 @@ function renderReplenishment() {
   }
   const labels = ['НМ', 'Товар', 'Остаток, шт.', 'Расход, шт./сутки', 'Учтено дней', 'Запас, дней', 'Довезти, шт.', 'Оценка'];
   replenishmentRows = [
-    ['Магазин WB', 'Вечерняя отсечка МСК', 'Целевой запас, дней', ...labels],
+    ['Магазин WB', 'Дата обхода МСК', 'Целевой запас, дней', ...labels],
     ...report.map(({article, name, quantity, daily, used, days, suggested, confidence}) => [
       store, date, target, article, name, quantity ?? '—', daily ?? '—', `${used} из ${period}`,
       days ?? '—', suggested ?? '—', confidence
